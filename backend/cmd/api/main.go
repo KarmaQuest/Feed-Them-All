@@ -33,6 +33,7 @@ import (
 
 	"github.com/KarmaQuest/feed-them-all/internal/auth"
 	"github.com/KarmaQuest/feed-them-all/internal/pings"
+	ws "github.com/KarmaQuest/feed-them-all/internal/websocket"
 )
 
 func main() {
@@ -69,10 +70,19 @@ func main() {
 	authSvc := auth.NewService(authRepo)
 	authHandler := auth.NewHandler(authSvc)
 
+	// --- Wire up WebSocket hub ---
+	hub := ws.NewHub()
+	go hub.Run()
+
 	// --- Wire up pings ---
 	pingsRepo := pings.NewRepository(db)
 	pingsSvc := pings.NewService(pingsRepo)
+	pingsSvc.SetBroadcaster(hub) // inject hub for real-time broadcasts
 	pingsHandler := pings.NewHandler(pingsSvc)
+
+	// --- Wire up WebSocket handler ---
+	jwtSecret := os.Getenv("JWT_SECRET")
+	wsHandler := ws.NewHandler(hub, jwtSecret)
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -124,6 +134,9 @@ func main() {
 	// Public read routes
 	r.Get("/pings/{id}/media", pingsHandler.ListMedia)
 	r.Get("/pings/{id}/reports", pingsHandler.ListReports)
+	// WebSocket endpoint (optional JWT via ?token=<JWT>)
+	r.Get("/ws", wsHandler.ServeWS)
+
 	// Serve uploaded files
 	uploadDir := os.Getenv("UPLOAD_DIR")
 	if uploadDir == "" {

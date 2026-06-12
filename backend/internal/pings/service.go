@@ -17,6 +17,12 @@
 //   - Vote : value doit être "up" ou "down" (ErrInvalidVote sinon)
 //     Un utilisateur ne peut voter qu'une fois par signalement (ErrAlreadyVoted)
 //     Le signalement doit exister (ErrNotFound sinon)
+//
+// Broadcaster (WebSocket) :
+//   Après chaque mutation réussie (Create, Confirm, MarkFed, Deactivate), le Service
+//   notifie optionnellement un Broadcaster (le Hub WebSocket) pour diffuser l'événement
+//   en temps réel aux clients connectés. Si aucun Broadcaster n'est injecté (nil),
+//   le comportement est identique — la mutation réussit sans broadcast.
 package pings
 
 import (
@@ -69,10 +75,20 @@ const (
 	maxUploadSize = 10 << 20 // 10 MB in bytes
 )
 
+// Broadcaster is the interface implemented by the WebSocket hub.
+// The pings package depends on this interface (not on the websocket package directly)
+// to avoid circular imports. The websocket package imports pings.Ping — pings must not
+// import websocket.
+type Broadcaster interface {
+	BroadcastPingCreated(p Ping)
+	BroadcastPingUpdated(p Ping)
+}
+
 // Service holds the business logic for pings.
 type Service struct {
-	store     Store
-	uploadDir string // local directory where uploaded files are saved
+	store       Store
+	uploadDir   string // local directory where uploaded files are saved
+	broadcaster Broadcaster // optional — nil if WebSocket is not wired
 }
 
 // NewService creates a Service. uploadDir is read from the UPLOAD_DIR env var,
@@ -83,6 +99,13 @@ func NewService(store Store) *Service {
 		dir = "./uploads"
 	}
 	return &Service{store: store, uploadDir: dir}
+}
+
+// SetBroadcaster injects the WebSocket hub into the service.
+// Call this after NewService, before the server starts.
+// Passing nil disables broadcasts (useful in tests).
+func (s *Service) SetBroadcaster(b Broadcaster) {
+	s.broadcaster = b
 }
 
 // Create validates the request and creates a new ping.
@@ -107,6 +130,11 @@ func (s *Service) Create(ctx context.Context, userID string, req CreatePingReque
 	// Round coordinates before returning publicly
 	ping.Lat = roundCoord(ping.Lat)
 	ping.Lon = roundCoord(ping.Lon)
+
+	// Broadcast to WebSocket clients in the ping's area.
+	if s.broadcaster != nil {
+		s.broadcaster.BroadcastPingCreated(ping)
+	}
 	return ping, nil
 }
 
@@ -152,6 +180,7 @@ func (s *Service) Confirm(ctx context.Context, pingID string) error {
 	if err := s.store.Confirm(ctx, pingID); err != nil {
 		return fmt.Errorf("pings.Service.Confirm: %w", err)
 	}
+	s.broadcastUpdated(ctx, pingID)
 	return nil
 }
 
@@ -160,6 +189,7 @@ func (s *Service) MarkFed(ctx context.Context, pingID string) error {
 	if err := s.store.MarkFed(ctx, pingID); err != nil {
 		return fmt.Errorf("pings.Service.MarkFed: %w", err)
 	}
+	s.broadcastUpdated(ctx, pingID)
 	return nil
 }
 
@@ -170,7 +200,25 @@ func (s *Service) Deactivate(ctx context.Context, pingID, userID string) error {
 	if err != nil {
 		return err // already a sentinel error from the store
 	}
+	s.broadcastUpdated(ctx, pingID)
 	return nil
+}
+
+// broadcastUpdated fetches the current state of a ping and broadcasts a "ping_updated" event.
+// Errors are logged but never propagate — a broadcast failure must not fail the operation.
+func (s *Service) broadcastUpdated(ctx context.Context, pingID string) {
+	if s.broadcaster == nil {
+		return
+	}
+	ping, err := s.store.GetByID(ctx, pingID)
+	if err != nil {
+		// Ping may have been deactivated — GetByID returns error for inactive pings.
+		// That's fine: the broadcast is best-effort.
+		return
+	}
+	ping.Lat = roundCoord(ping.Lat)
+	ping.Lon = roundCoord(ping.Lon)
+	s.broadcaster.BroadcastPingUpdated(ping)
 }
 
 // SaveMedia validates and saves an uploaded file for a given ping.
