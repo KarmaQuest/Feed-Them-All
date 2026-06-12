@@ -36,7 +36,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
 // Repository is the PostgreSQL implementation of Store.
 type Repository struct {
 	db *pgxpool.Pool
@@ -322,16 +321,16 @@ func (r *Repository) GetReport(ctx context.Context, reportID string) (PingReport
 	return rp, nil
 }
 
-// VoteReport inserts a vote (up/down) on a report.
-// Returns ErrAlreadyVoted if the user already voted on this report (unique constraint).
+// VoteReport inserts or updates a vote (up/down) on a report.
+// If the user already voted, the value is updated (upsert — allows changing up→down or down→up).
 func (r *Repository) VoteReport(ctx context.Context, reportID, userID, value string) error {
-	const q = `INSERT INTO ping_report_votes (report_id, user_id, value) VALUES ($1, $2, $3)`
+	const q = `
+		INSERT INTO ping_report_votes (report_id, user_id, value)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (report_id, user_id) DO UPDATE SET value = EXCLUDED.value
+	`
 	_, err := r.db.Exec(ctx, q, reportID, userID, value)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return ErrAlreadyVoted
-		}
 		return fmt.Errorf("pings.VoteReport: %w", err)
 	}
 	return nil

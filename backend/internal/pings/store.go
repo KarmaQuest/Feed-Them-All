@@ -64,7 +64,7 @@ type Store interface {
 	// Returns ErrNotFound if it does not exist.
 	GetReport(ctx context.Context, reportID string) (PingReport, error)
 
-	// VoteReport casts a vote (up or down) on a report.
-	// Returns ErrAlreadyVoted if the user has already voted on this report.
+	// VoteReport casts or updates a vote (up or down) on a report.
+	// Upsert behaviour: if the user already voted, the value is updated (up↔down).
 	VoteReport(ctx context.Context, reportID, userID, value string) error
 }

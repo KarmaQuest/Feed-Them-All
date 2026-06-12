@@ -305,8 +305,6 @@ func (h *Handler) VoteReport(w http.ResponseWriter, r *http.Request) {
 			writeError(w, err.Error(), http.StatusBadRequest)
 		case errors.Is(err, ErrNotFound):
 			writeError(w, "report not found", http.StatusNotFound)
-		case errors.Is(err, ErrAlreadyVoted):
-			writeError(w, err.Error(), http.StatusConflict)
 		default:
 			slog.Error("VoteReport failed", "report_id", reportID, "err", err)
 			writeError(w, "internal server error", http.StatusInternalServerError)

@@ -60,9 +60,6 @@ var (
 
 	// ErrInvalidVote is returned when the vote value is not "up" or "down".
 	ErrInvalidVote = errors.New("value must be 'up' or 'down'")
-
-	// ErrAlreadyVoted is returned when the user already voted on this report.
-	ErrAlreadyVoted = errors.New("you already voted on this report")
 )
 
 const (
