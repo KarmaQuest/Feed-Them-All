@@ -122,6 +122,7 @@ fix/*         ← Corrections de bugs
 - **Conventional Commits** : `feat:`, `fix:`, `chore:`, `docs:`, `refactor:` — obligatoire pour générer un changelog
 - Chaque PR doit passer les tests CI avant merge
 - Pas de push direct sur `main` ni `dev`
+- **Règle absolue — push à chaque étape** : chaque tâche ou sous-tâche terminée (P1-01, P1-02…) doit faire l'objet d'un commit + push sur `dev` immédiatement après validation. Aucune étape ne reste en local.
 
 ---
 
@@ -264,8 +265,9 @@ Les agents sont des fichiers `SKILL.md` dans `.github/skills/`, chargés automat
 ## Features Prévues (validées)
 
 ### 🐾 Suivi des animaux
-- **Fiche animal persistante** — un animal signalé plusieurs fois crée une fiche avec historique, photos, surnom donné par la communauté
-- **Statut d'adoption** — marquer un animal comme "adopté" ou "pris en charge par un refuge"
+- **Fiche animal persistante** — tout utilisateur (Feeder ou Giver) peut créer une fiche animal : historique des signalements, photos, surnom donné par la communauté. Les fiches peuvent être créées directement depuis un ping ou manuellement.
+- **Mise en avant des fiches associatives** — quand une association partenaire a créé ou validé une fiche pour cet animal, sa fiche est affichée en priorité (badge "Suivi par [Association]", informations de contact, actions en cours). La fiche communautaire reste accessible mais est secondaire.
+- **Statut d'adoption** — marquer un animal comme "adopté" ou "pris en charge par un refuge" (accessible à tous, confirmé par une association si présente)
 - **Estimation de population par zone** — heatmap des zones denses en animaux errants
 
 ### 🤝 Partenariats & Impact
