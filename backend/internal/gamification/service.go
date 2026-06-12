@@ -8,6 +8,7 @@
 //   2. Vérifie que la limite journalière n'est pas atteinte
 //   3. Log l'XP + incrémente users.xp (atomique en DB)
 //   4. Lance une goroutine pour vérifier et débloquer les badges
+//   5. Dans la même goroutine : vérifie les items quête débloquables (via ItemGranter)
 //
 // La vérification de badges est asynchrone (goroutine) pour ne pas bloquer
 // la réponse HTTP de l'action initiale. Les erreurs sont loggées, jamais propagées.
@@ -24,14 +25,29 @@ import (
 	"time"
 )
 
+// ItemGranter is the interface implemented by the shop service.
+// Called after each XP award to unlock quest items.
+// Defined here (not in shop/) to avoid circular imports:
+// shop imports nothing from gamification; gamification imports nothing from shop.
+type ItemGranter interface {
+	CheckQuestItems(ctx context.Context, userID string, userXP int, lastAction string)
+}
+
 // Service holds the gamification business logic.
 type Service struct {
-	store Store
+	store       Store
+	itemGranter ItemGranter // optional — nil until shop is wired
 }
 
 // NewService creates a gamification Service.
 func NewService(store Store) *Service {
 	return &Service{store: store}
+}
+
+// SetItemGranter injects the shop service for quest item unlocks.
+// Call after NewService, before the server starts.
+func (s *Service) SetItemGranter(g ItemGranter) {
+	s.itemGranter = g
 }
 
 // AwardXP grants XP to a user for completing an action.
@@ -67,10 +83,19 @@ func (s *Service) AwardXP(ctx context.Context, userID, action string) error {
 
 	slog.Info("xp awarded", "user_id", userID, "action", action, "xp", cfg.XPValue, "total", newXP)
 
-	// 4. Async badge check — must not block the HTTP response
-	go s.checkBadges(context.Background(), userID, newXP, action)
+	// 4. Async badge + quest item check — must not block the HTTP response
+	go s.checkBadgesAndItems(context.Background(), userID, newXP, action)
 
 	return nil
+}
+
+// checkBadgesAndItems checks badge conditions and quest item conditions after an XP award.
+// Runs in a goroutine. All errors are logged and swallowed.
+func (s *Service) checkBadgesAndItems(ctx context.Context, userID string, currentXP int, lastAction string) {
+	s.checkBadges(ctx, userID, currentXP, lastAction)
+	if s.itemGranter != nil {
+		s.itemGranter.CheckQuestItems(ctx, userID, currentXP, lastAction)
+	}
 }
 
 // checkBadges checks all badge conditions for a user after an XP award.

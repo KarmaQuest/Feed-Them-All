@@ -78,7 +78,7 @@
 - [x] **P4-05** Job asynchrone (goroutine) pour vérifier et déverrouiller les badges
 - [x] **P4-06** `GET /users/:id/profile` — retourne XP, niveau, badges, avatar config
 - [x] **P4-07** `GET /leaderboard` — top 20 utilisateurs par XP (avec cache en mémoire, TTL 5 min)
-- [ ] **P4-08** Système d'inventaire avatars
+- [x] **P4-08** Système d'inventaire avatars
   - Migration : table `avatar_items` (id, slug, name, category `skin|outfit|accessory`, price_cents, unlock_condition)
   - Migration : table `user_avatar_items` (user_id FK, item_id FK, acquired_at, source `quest|purchase`)
   - `GET /users/me/inventory` — liste les items possédés par l'utilisateur connecté

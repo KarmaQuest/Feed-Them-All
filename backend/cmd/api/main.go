@@ -34,6 +34,7 @@ import (
 	"github.com/KarmaQuest/feed-them-all/internal/auth"
 	"github.com/KarmaQuest/feed-them-all/internal/gamification"
 	"github.com/KarmaQuest/feed-them-all/internal/pings"
+	"github.com/KarmaQuest/feed-them-all/internal/shop"
 	"github.com/KarmaQuest/feed-them-all/internal/users"
 	ws "github.com/KarmaQuest/feed-them-all/internal/websocket"
 )
@@ -75,6 +76,12 @@ func main() {
 	// --- Wire up gamification ---
 	gamRepo := gamification.NewRepository(db)
 	gamSvc := gamification.NewService(gamRepo)
+
+	// --- Wire up shop ---
+	shopRepo := shop.NewRepository(db)
+	shopSvc := shop.NewService(shopRepo, os.Getenv("STRIPE_SECRET_KEY"), os.Getenv("STRIPE_WEBHOOK_SECRET"))
+	shopHandler := shop.NewHandler(shopSvc)
+	gamSvc.SetItemGranter(shopSvc) // quest item unlock after each XP award
 
 	// --- Wire up WebSocket hub ---
 	hub := ws.NewHub()
@@ -152,6 +159,18 @@ func main() {
 	// Users & leaderboard (public)
 	r.Get("/users/{id}/profile", usersHandler.GetProfile)
 	r.Get("/leaderboard", usersHandler.GetLeaderboard)
+
+	// Shop catalogue (public)
+	r.Get("/shop/items", shopHandler.GetCatalogue)
+	// Stripe webhook (no JWT — Stripe signature verification inside handler)
+	r.Post("/shop/webhook", shopHandler.Webhook)
+
+	// Authenticated shop + inventory routes
+	r.Group(func(r chi.Router) {
+		r.Use(authSvc.Middleware)
+		r.Get("/users/me/inventory", shopHandler.GetInventory)
+		r.Post("/shop/items/{id}/purchase", shopHandler.Purchase)
+	})
 
 	// Serve uploaded files
 	uploadDir := os.Getenv("UPLOAD_DIR")
