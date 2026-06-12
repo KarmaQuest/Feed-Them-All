@@ -78,6 +78,12 @@
 - [ ] **P4-05** Job asynchrone (goroutine) pour vérifier et déverrouiller les badges
 - [ ] **P4-06** `GET /users/:id/profile` — retourne XP, niveau, badges, avatar config
 - [ ] **P4-07** `GET /leaderboard` — top 20 utilisateurs par XP (avec cache en mémoire, TTL 5 min)
+- [ ] **P4-08** Système d'inventaire avatars
+  - Migration : table `avatar_items` (id, slug, name, category `skin|outfit|accessory`, price_cents, unlock_condition)
+  - Migration : table `user_avatar_items` (user_id FK, item_id FK, acquired_at, source `quest|purchase`)
+  - `GET /users/me/inventory` — liste les items possédés par l'utilisateur connecté
+  - `POST /shop/purchase` — achat one-shot Stripe d'un item → `payment_intent` → webhook → crédit inventaire
+  - Déverrouillage automatique via quête : appelé depuis `award_xp()` quand un seuil de quête est atteint
 
 ---
 
@@ -112,6 +118,15 @@
 - [ ] **P7-04** Page customisation avatar (`/avatar`) — sélecteur visuel de skin/tenue/accessoire
 - [ ] **P7-05** Sauvegarder la config avatar en DB via `PATCH /users/me/avatar`
 - [ ] **P7-06** Afficher les avatars des autres Feeders actifs sur la carte (en semi-transparent)
+- [ ] **P7-07** Animations de proximité sur la carte
+  - Feeder à < 30 m d'un ping animal → jouer animation "nourrir" (frame dédiée du spritesheet)
+  - Feeder à < 30 m d'un ping Giver → jouer animation "entrer dans le bâtiment" (sprite disparaît derrière le marqueur)
+  - Calcul de proximité côté client (distance Haversine, aucun changement backend)
+- [ ] **P7-08** Page boutique avatar (`/shop`)
+  - Affiche tous les items disponibles (skins, tenues, accessoires) avec leur prix ou condition de déverrouillage
+  - Deux onglets : **Quêtes** (gratuit, déblocage via XP/succès) · **Boutique** (achat one-shot Stripe)
+  - Appel `POST /shop/purchase` → crédite l'item dans l'inventaire utilisateur
+  - Appel `GET /users/me/inventory` → liste les items possédés
 
 ---
 
@@ -125,7 +140,9 @@
 - [ ] **P8-06** Créer les icônes marqueurs : gamelle, patte, étoile (zone nourrie)
 - [ ] **P8-07** Créer la barre XP pixel art (composant React CSS)
 - [ ] **P8-08** Créer la fenêtre de notification style dialogue RPG
-- [ ] **P8-09** Créer les sprites de customisation : 3 tenues, 3 couleurs de cheveux, 2 accessoires (MVP)
+- [ ] **P8-09** Créer les sprites de customisation MVP : 3 tenues, 3 couleurs de cheveux, 2 accessoires (débloquables via quêtes)
+- [ ] **P8-10** Créer les sprites boutique (items premium) : 2 skins exclusifs, 2 tenues achetables — visuellement distincts des items gratuits
+- [ ] **P8-11** Créer les frames d'animation de proximité : "nourrir" (4 frames) · "entrer bâtiment" (3 frames fade-out)
 
 ---
 
@@ -155,7 +172,7 @@
 - [ ] Plateforme de dons ciblés portée par les associations partenaires (FeedThemAll = intermédiaire technique, fonds → association directement)
 
 ### Gamification avancée
-- [ ] Système de quêtes (hebdomadaires, style Pokémon)
+- [ ] Système de quêtes (hebdomadaires, style Pokémon) — récompenses : XP, badges, **skins/tenues exclusifs** débloqués dans l'inventaire
 - [ ] Guildes de quartier + classement inter-quartiers
 - [ ] Saisons (remise à zéro classement tous les 3 mois + récompenses top 10)
 - [ ] Titres géographiques ("Gardien du 11ème", "Légende de Belleville")
@@ -178,6 +195,11 @@
   - [ ] Webhook Stripe → activer/désactiver `is_premium` sur le compte utilisateur
   - [ ] Page paiement Web (`/support`) — 3 boutons + champ montant libre
   - [ ] Gestion multi-devises : USD par défaut, EUR/GBP/CAD phase 2 (détection IP, taux Stripe)
+- [ ] **Boutique in-app skins** — achat one-shot de skins/tenues/accessoires exclusifs via Stripe `payment_intent`
+  - Items créés en DB (`avatar_items`), prix fixé par l'équipe
+  - Webhook Stripe → `user_avatar_items` (source = `purchase`)
+  - Item aussitôt disponible dans le sélecteur avatar
+  - Principe : les items boutique sont **cosmétiques uniquement** — aucun avantage gameplay
 - [ ] **Dons one-shot à FeedThemAll** — `payment_intent` Stripe (pas de récurrence), même page `/support`
 - [ ] **Dons ciblés associations** — `payment_intent` Stripe vers compte Stripe propre de l'association (Stripe Connect, FTA zéro commission)
 - [ ] API publique données anonymisées
