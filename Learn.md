@@ -334,7 +334,7 @@ Pour FeedThemAll, il faut donc un **serveur qui tourne en permanence**.
 
 | Option | Prix | Facilité | WebSocket | PostGIS | Photos uploadées |
 |---|---|---|---|---|---|
-| **Hetzner VPS CX21** | ~5€/mois | Moyenne (Linux) | ✅ | ✅ via Docker | ✅ disque local |
+| **Hetzner VPS CX23** | ~4.49€/mois | Moyenne (Linux) | ✅ | ✅ via Docker | ✅ disque local |
 | **Fly.io** | ~5-10€/mois | Facile | ✅ | ✅ | ⚠️ disparaissent au redéploiement |
 | **Railway** | ~5€/mois | Très facile | ✅ | ⚠️ non garanti | ⚠️ disparaissent |
 | **Render** | ~7€/mois | Facile | ✅ | ✅ | ⚠️ disparaissent |
@@ -345,7 +345,7 @@ Pour FeedThemAll, il faut donc un **serveur qui tourne en permanence**.
 
 **Phase actuelle (dev local) → tout tourne sur ta machine.** Aucun serveur requis.
 
-**MVP / premiers utilisateurs → Hetzner VPS CX21 (~5€/mois)**
+**MVP / premiers utilisateurs → Hetzner VPS CX23 (~4.49€/mois)**
 - Un seul serveur Linux, Docker Compose : Go + PostgreSQL+PostGIS + photos sur le même disque
 - Même configuration qu'en local, juste sur une machine distante
 - Pas de services séparés à gérer, pas de surprise de facturation

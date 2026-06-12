@@ -320,7 +320,7 @@ Le WebSocket nécessite une **connexion persistante**. Les hébergements de type
 
 | Option | Prix | Complexité | WebSocket | PostGIS | Uploads |
 |---|---|---|---|---|---|
-| **Hetzner VPS CX21** | ~5€/mois | Moyenne | ✅ | ✅ Docker | ✅ disque local |
+| **Hetzner VPS CX23** | ~4.49€/mois | Moyenne | ✅ | ✅ Docker | ✅ disque local |
 | **Fly.io** | ~5-10€/mois | Faible | ✅ natif | ✅ via Fly Postgres | ⚠️ éphémère → R2 |
 | **Railway** | ~5€/mois | Très faible | ✅ | ⚠️ PostGIS non garanti | ⚠️ éphémère |
 | **Render** | ~7€/mois | Faible | ✅ | ✅ | ⚠️ éphémère |
@@ -329,7 +329,7 @@ Le WebSocket nécessite une **connexion persistante**. Les hébergements de type
 
 ### Recommandation par stade
 
-**MVP / dev seul → Hetzner VPS CX21 (~5€/mois)**
+**MVP / dev seul → Hetzner VPS CX23 (~4.49€/mois)**
 - Un seul serveur Linux, Docker Compose, tout dessus : Go + PostgreSQL+PostGIS + fichiers
 - Zéro complexité supplémentaire, pas de services séparés à gérer
 - Exactement ce qu'on a en local, déployé sur un vrai serveur distant
