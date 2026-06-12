@@ -60,12 +60,12 @@
 
 ## Phase 3 — Backend : WebSocket & Temps Réel
 
-- [ ] **P3-01** Mettre en place le serveur WebSocket (`gorilla/websocket`)
-- [ ] **P3-02** Système d'abonnement par bounding box (le client envoie sa zone visible)
-- [ ] **P3-03** Broadcast d'un nouveau ping aux clients abonnés à la zone correspondante
-- [ ] **P3-04** Broadcast de la position des Feeders actifs (avatar en temps réel sur la carte)
-- [ ] **P3-05** Gestion des déconnexions et nettoyage des abonnements
-- [ ] **P3-06** Limiter la fréquence de mise à jour de position GPS (max 1 push/seconde par client)
+- [x] **P3-01** Mettre en place le serveur WebSocket (`gorilla/websocket`)
+- [x] **P3-02** Système d'abonnement par bounding box (le client envoie sa zone visible)
+- [x] **P3-03** Broadcast d'un nouveau ping aux clients abonnés à la zone correspondante
+- [x] **P3-04** Broadcast de la position des Feeders actifs (avatar en temps réel sur la carte)
+- [x] **P3-05** Gestion des déconnexions et nettoyage des abonnements
+- [x] **P3-06** Limiter la fréquence de mise à jour de position GPS (max 1 push/seconde par client)
 
 ---
 
