@@ -41,11 +41,19 @@
 - [x] **P2-05** `DELETE /pings/:id` — désactiver un ping (soft delete `is_active = false`)
 - [x] **P2-06** Upload de photo de preuve (`POST /pings/:id/media`) — validation MIME, 10 Mo max, stockage `uploads/`
 - [x] **P2-07** Servir les fichiers `uploads/` via un handler Go statique
-- [ ] **P2-08** `POST /pings/:id/report` — signaler un problème sur un ping
-  - Accessible à **tout utilisateur authentifié, y compris le créateur du ping**
-  - Champs : `reason` (enum : `wrong_location` \| `animal_gone` \| `duplicate` \| `inappropriate`) + `comment` (optionnel)
-  - Un utilisateur ne peut signaler qu'une fois le même ping (contrainte DB unique sur `ping_id + reported_by`)
-  - Migration `000004_ping_reports` : table `ping_reports` (id, ping_id, reported_by, reason, comment, created_at)
+- [ ] **P2-08** Signalement et votes sur les pings
+  - `POST /pings/:id/report` — signaler un problème sur un ping
+    - Accessible à **tout utilisateur authentifié, y compris le créateur du ping**
+    - Champs : `reason` (enum : `wrong_location` \| `animal_gone` \| `duplicate` \| `inappropriate`) + `comment` (optionnel)
+    - Un utilisateur ne peut signaler qu'une fois le même ping (contrainte DB unique sur `ping_id + reported_by`)
+  - `POST /pings/:id/reports/:report_id/vote` — voter pour ou contre un signalement
+    - Accessible à **tout utilisateur authentifié, y compris le créateur du ping ou du report**
+    - Champs : `value` (enum : `up` \| `down`)
+    - Un utilisateur ne peut voter qu'une fois par signalement (contrainte unique `report_id + user_id`)
+    - Les votes prouvent la véracité du ping : un taux élevé de `up` sur un report `animal_gone` peut marquer le ping comme douteux sur la carte
+  - Migrations :
+    - `000004_ping_reports` : table `ping_reports` (id, ping_id FK, reported_by FK, reason, comment, created_at)
+    - `000005_ping_report_votes` : table `ping_report_votes` (id, report_id FK cascade, user_id FK cascade, value `'up'|'down'`, created_at, UNIQUE(report_id, user_id))
 - [ ] **P2-09** Tests : package `pings`
 
 ---
