@@ -20,9 +20,9 @@
 
 ## Phase 1 — Backend : Base & Auth
 
-- [ ] **P1-01** Créer la migration initiale : tables `users`, `pings`, `xp_actions`, `user_badges`
-- [ ] **P1-02** Ajouter l'index spatial PostGIS sur `pings.location`
-- [ ] **P1-03** Mettre en place `golang-migrate` pour versionner les migrations
+- [x] **P1-01** Créer la migration initiale : tables `users`, `pings`, `animal_profiles`, `xp_actions`, `badges`, `user_badges`, `subscriptions`, `ping_animal_links`
+- [x] **P1-02** Ajouter l'index spatial PostGIS sur `pings.location` (inclus dans `000001_init.up.sql`)
+- [x] **P1-03** Mettre en place `golang-migrate` pour versionner les migrations
 - [ ] **P1-04** Implémenter l'inscription (`POST /auth/register`) — hash bcrypt du mot de passe
 - [ ] **P1-05** Implémenter la connexion (`POST /auth/login`) — retourne access token JWT (15 min)
 - [ ] **P1-06** Implémenter le refresh token (`POST /auth/refresh`) — cookie HttpOnly 7 jours
@@ -130,8 +130,9 @@
 ## Backlog / Phase 2+
 
 ### Suivi des animaux
-- [ ] Fiche animal persistante (historique, photos, surnom communautaire)
-- [ ] Statut d'adoption / prise en charge refuge
+- [ ] Fiche animal créée par n'importe quel utilisateur (Feeder/Giver) depuis un ping ou manuellement
+- [ ] Fiche associative mise en avant quand une association a créé/validé la fiche (badge "Suivi par [Association]", contact, actions en cours) — fiche communautaire reste visible en secondaire
+- [ ] Statut d'adoption / prise en charge refuge (modifiable par tous, confirmable par une association)
 - [ ] Heatmap densité animaux par zone
 
 ### Comptes Association
