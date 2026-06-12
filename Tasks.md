@@ -54,7 +54,7 @@
   - Migrations :
     - `000004_ping_reports` : table `ping_reports` (id, ping_id FK, reported_by FK, reason, comment, created_at)
     - `000005_ping_report_votes` : table `ping_report_votes` (id, report_id FK cascade, user_id FK cascade, value `'up'|'down'`, created_at, UNIQUE(report_id, user_id))
-- [ ] **P2-09** Tests : package `pings`
+- [x] **P2-09** Tests : package `pings`
 
 ---
 

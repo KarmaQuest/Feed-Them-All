@@ -52,3 +52,9 @@ func UserIDFromContext(ctx context.Context) string {
 	id, _ := ctx.Value(ctxKeyUserID).(string)
 	return id
 }
+
+// NewContextWithUserID returns a copy of ctx with the given userID injected.
+// Intended for use in tests outside the auth package to simulate an authenticated request.
+func NewContextWithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, ctxKeyUserID, userID)
+}
