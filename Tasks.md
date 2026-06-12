@@ -41,7 +41,12 @@
 - [x] **P2-05** `DELETE /pings/:id` — désactiver un ping (soft delete `is_active = false`)
 - [x] **P2-06** Upload de photo de preuve (`POST /pings/:id/media`) — validation MIME, 10 Mo max, stockage `uploads/`
 - [x] **P2-07** Servir les fichiers `uploads/` via un handler Go statique
-- [ ] **P2-08** Tests d'intégration : package `pings` avec DB PostgreSQL de test (Docker)
+- [ ] **P2-08** `POST /pings/:id/report` — signaler un problème sur un ping
+  - Accessible à **tout utilisateur authentifié, y compris le créateur du ping**
+  - Champs : `reason` (enum : `wrong_location` \| `animal_gone` \| `duplicate` \| `inappropriate`) + `comment` (optionnel)
+  - Un utilisateur ne peut signaler qu'une fois le même ping (contrainte DB unique sur `ping_id + reported_by`)
+  - Migration `000004_ping_reports` : table `ping_reports` (id, ping_id, reported_by, reason, comment, created_at)
+- [ ] **P2-09** Tests : package `pings`
 
 ---
 
