@@ -260,6 +260,65 @@ Disponible uniquement quand `ENV=development`.
 
 ---
 
+## Polling vs WebSocket — deux façons de recevoir des données en temps réel
+
+### Le polling — "est-ce qu'il y a du nouveau ?"
+
+Sans WebSocket, la seule façon pour le client de savoir si quelque chose a changé est de **demander régulièrement** au serveur.
+
+```
+[Client]          [Serveur]
+   │  GET /pings       │
+   │ ────────────────► │ → "rien de nouveau"
+   │                   │
+   │  (1 seconde)      │
+   │  GET /pings       │
+   │ ────────────────► │ → "rien de nouveau"
+   │                   │
+   │  (1 seconde)      │
+   │  GET /pings       │
+   │ ────────────────► │ → "voilà 2 nouveaux pings !"
+```
+
+C'est comme appuyer sur F5 toutes les secondes pour actualiser une page.
+
+**Problèmes du polling :**
+- Gaspille de la bande passante et des ressources serveur (1000 utilisateurs = 1000 requêtes/seconde)
+- Le délai entre la création d'un ping et son apparition chez les autres = jusqu'à 1 seconde
+- Si on augmente la fréquence pour réduire le délai, ça empire le gaspillage
+
+### WebSocket — "je t'enverrai un message quand il y a du nouveau"
+
+Un **WebSocket** est une connexion permanente et bidirectionnelle entre le client et le serveur.
+Une fois ouverte, les deux peuvent s'envoyer des messages à tout moment — sans que le client ait besoin de demander.
+
+```
+[Client]                    [Serveur]
+   │  Connexion WebSocket       │
+   │ ─────────────────────────► │  ← connexion établie une seule fois
+   │                            │
+   │                            │  (quelqu'un crée un ping)
+   │ ◄───────────────────────── │  → "nouveau ping ici !"  (immédiat)
+   │                            │
+   │                            │  (un feeder se déplace)
+   │ ◄───────────────────────── │  → "le feeder X est maintenant là"
+   │                            │
+   │  (connexion reste ouverte) │
+```
+
+**Avantages du WebSocket :**
+- La carte se met à jour **instantanément** quand quelqu'un crée un ping
+- Le serveur n'envoie des données **que quand il y a quelque chose à dire**
+- Une seule connexion par utilisateur au lieu d'une requête par seconde
+
+### Pourquoi le WebSocket avant le frontend ?
+
+Si on construisait d'abord le frontend (la carte) avec du polling, puis qu'on ajoutait le WebSocket après,
+il faudrait réécrire toute la logique de mise à jour de la carte.
+En faisant le WebSocket d'abord, le frontend peut se connecter directement à une vraie connexion temps réel.
+
+---
+
 ## Le package `pings` — `backend/internal/pings/`
 
 C'est le module qui gère les signalements sur la carte : créer un ping, le retrouver par GPS,
