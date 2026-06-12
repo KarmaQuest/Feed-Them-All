@@ -34,13 +34,13 @@
 
 ## Phase 2 — Backend : Pings & Géolocalisation
 
-- [ ] **P2-01** `GET /pings?lat=&lon=&radius=` — récupérer les pings dans un rayon (ST_DWithin)
-- [ ] **P2-02** `POST /pings` — créer un ping (animal ou nourriture), position GPS requise
-- [ ] **P2-03** `PATCH /pings/:id/confirm` — confirmer la présence d'un animal (avec photo optionnelle)
-- [ ] **P2-04** `PATCH /pings/:id/fed` — marquer un animal comme nourri
-- [ ] **P2-05** `DELETE /pings/:id` — désactiver un ping (soft delete `is_active = false`)
-- [ ] **P2-06** Upload de photo de preuve (`POST /pings/:id/media`) — validation MIME, 10 Mo max, stockage `uploads/`
-- [ ] **P2-07** Servir les fichiers `uploads/` via un handler Go statique
+- [x] **P2-01** `GET /pings?lat=&lon=&radius=` — récupérer les pings dans un rayon (ST_DWithin)
+- [x] **P2-02** `POST /pings` — créer un ping (animal ou nourriture), position GPS requise
+- [x] **P2-03** `PATCH /pings/:id/confirm` — confirmer la présence d'un animal (avec photo optionnelle)
+- [x] **P2-04** `PATCH /pings/:id/fed` — marquer un animal comme nourri
+- [x] **P2-05** `DELETE /pings/:id` — désactiver un ping (soft delete `is_active = false`)
+- [x] **P2-06** Upload de photo de preuve (`POST /pings/:id/media`) — validation MIME, 10 Mo max, stockage `uploads/`
+- [x] **P2-07** Servir les fichiers `uploads/` via un handler Go statique
 - [ ] **P2-08** Tests d'intégration : package `pings` avec DB PostgreSQL de test (Docker)
 
 ---

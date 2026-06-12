@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/KarmaQuest/feed-them-all/internal/auth"
+	"github.com/KarmaQuest/feed-them-all/internal/pings"
 )
 
 func main() {
@@ -68,6 +69,11 @@ func main() {
 	authSvc := auth.NewService(authRepo)
 	authHandler := auth.NewHandler(authSvc)
 
+	// --- Wire up pings ---
+	pingsRepo := pings.NewRepository(db)
+	pingsSvc := pings.NewService(pingsRepo)
+	pingsHandler := pings.NewHandler(pingsSvc)
+
 	// --- Router ---
 	r := chi.NewRouter()
 
@@ -99,11 +105,27 @@ func main() {
 		r.Post("/refresh", authHandler.Refresh)
 	})
 
-	// Auth routes (protected)
+	// Pings routes (GET is public, mutations require JWT)
+	r.Get("/pings", pingsHandler.ListNearby)
 	r.Group(func(r chi.Router) {
 		r.Use(authSvc.Middleware)
+		// Auth logout
 		r.Post("/auth/logout", authHandler.Logout)
+		// Pings mutations
+		r.Post("/pings", pingsHandler.Create)
+		r.Patch("/pings/{id}/confirm", pingsHandler.Confirm)
+		r.Patch("/pings/{id}/fed", pingsHandler.MarkFed)
+		r.Delete("/pings/{id}", pingsHandler.Deactivate)
+		r.Post("/pings/{id}/media", pingsHandler.UploadMedia)
 	})
+	// Media listing is public
+	r.Get("/pings/{id}/media", pingsHandler.ListMedia)
+	// Serve uploaded files
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "./uploads"
+	}
+	r.Handle("/uploads/*", http.StripPrefix("/uploads", http.FileServer(http.Dir(uploadDir))))
 
 	// --- Start server ---
 	srv := &http.Server{
