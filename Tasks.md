@@ -6,15 +6,15 @@
 
 ## Phase 0 — Setup & Infrastructure Locale
 
-- [ ] **P0-01** Initialiser le monorepo Git et pousser la structure sur GitHub (`Feed-Them-All`)
-- [ ] **P0-02** Créer `docker-compose.yml` avec PostgreSQL 15 + extension PostGIS
-- [ ] **P0-03** Vérifier que PostgreSQL démarre localement et que PostGIS est actif
-- [ ] **P0-04** Initialiser le module Go (`go mod init github.com/KarmaQuest/feed-them-all`)
-- [ ] **P0-05** Initialiser le projet React Web (`Vite + TypeScript`) dans `frontend-web/`
-- [ ] **P0-06** Configurer ESLint + Prettier dans `frontend-web/`
-- [ ] **P0-07** Créer le fichier `.env.example` à la racine du backend
-- [ ] **P0-08** Créer le fichier `.gitignore` (exclure `.env`, `uploads/`, `node_modules/`, binaires Go)
-- [ ] **P0-09** Mettre en place GitHub Actions : CI lint + test au push sur `dev`
+- [x] **P0-01** Initialiser le monorepo Git et pousser la structure sur GitHub (`Feed-Them-All`)
+- [x] **P0-02** Créer `docker-compose.yml` avec PostgreSQL 15 + extension PostGIS
+- [x] **P0-03** Vérifier que PostgreSQL démarre localement et que PostGIS est actif
+- [x] **P0-04** Initialiser le module Go (`go mod init github.com/KarmaQuest/feed-them-all`)
+- [x] **P0-05** Initialiser le projet React Web (`Vite + TypeScript`) dans `frontend-web/`
+- [x] **P0-06** Configurer ESLint + Prettier dans `frontend-web/`
+- [x] **P0-07** Créer le fichier `.env.example` à la racine du backend
+- [x] **P0-08** Créer le fichier `.gitignore` (exclure `.env`, `uploads/`, `node_modules/`, binaires Go)
+- [x] **P0-09** Mettre en place GitHub Actions : CI lint + test au push sur `dev`
 
 ---
 
@@ -129,11 +129,45 @@
 
 ## Backlog / Phase 2+
 
-- [ ] Système de dons (Stripe ou PayPal — phase 2)
-- [ ] Publicités (AdMob mobile, Google AdSense web — phase 2)
-- [ ] Abonnement Premium (badge, sans pub — phase 2)
-- [ ] Migration stockage médias vers Cloudflare R2 (phase 2)
-- [ ] Modération communautaire (signaler un ping abusif)
-- [ ] Notifications push (Firebase FCM — mobile)
+### Suivi des animaux
+- [ ] Fiche animal persistante (historique, photos, surnom communautaire)
+- [ ] Statut d'adoption / prise en charge refuge
+- [ ] Heatmap densité animaux par zone
+
+### Comptes Association
+- [ ] Type utilisateur `association` (3ème rôle)
+- [ ] Tableau de bord association (stats, zones, bénévoles actifs)
+- [ ] Validation de fiches animaux par les associations
+- [ ] Plateforme de dons ciblés portée par les associations partenaires (FeedThemAll = intermédiaire technique, fonds → association directement)
+
+### Gamification avancée
+- [ ] Système de quêtes (hebdomadaires, style Pokémon)
+- [ ] Guildes de quartier + classement inter-quartiers
+- [ ] Saisons (remise à zéro classement tous les 3 mois + récompenses top 10)
+- [ ] Titres géographiques ("Gardien du 11ème", "Légende de Belleville")
+
+### Carte & UX
+- [ ] Mode nuit/jour (carte adaptée à l'heure)
+- [ ] Zones dangereuses (signalement chantier, circulation)
+- [ ] Itinéraire de nourrissage optimisé
+
+### Mobile
+- [ ] Mode hors-ligne (cache local + sync)
+- [ ] Notifications push (Firebase FCM)
+- [ ] Widget home screen
+
+### Infrastructure & Monétisation
+- [ ] Publicités (AdMob mobile, Google AdSense web)
+- [ ] **Abonnement Premium volontaire** — paliers 5$/mois · 10$/mois · montant libre (Stripe Billing, récurrent)
+  - [ ] Intégration Stripe (clés API, webhook secret dans `.env`)
+  - [ ] Table `subscriptions` en DB (user_id, stripe_customer_id, stripe_subscription_id, plan, status, currency)
+  - [ ] Webhook Stripe → activer/désactiver `is_premium` sur le compte utilisateur
+  - [ ] Page paiement Web (`/support`) — 3 boutons + champ montant libre
+  - [ ] Gestion multi-devises : USD par défaut, EUR/GBP/CAD phase 2 (détection IP, taux Stripe)
+- [ ] **Dons one-shot à FeedThemAll** — `payment_intent` Stripe (pas de récurrence), même page `/support`
+- [ ] **Dons ciblés associations** — `payment_intent` Stripe vers compte Stripe propre de l'association (Stripe Connect, FTA zéro commission)
+- [ ] API publique données anonymisées
+- [ ] Migration stockage médias vers Cloudflare R2
 - [ ] Cache Redis pour leaderboard et pings chauds
 - [ ] Déploiement VPS (Docker Compose en production)
+- [ ] Support multi-villes / multi-pays

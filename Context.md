@@ -261,6 +261,52 @@ Les agents sont des fichiers `SKILL.md` dans `.github/skills/`, chargés automat
 
 ---
 
+## Features Prévues (validées)
+
+### 🐾 Suivi des animaux
+- **Fiche animal persistante** — un animal signalé plusieurs fois crée une fiche avec historique, photos, surnom donné par la communauté
+- **Statut d'adoption** — marquer un animal comme "adopté" ou "pris en charge par un refuge"
+- **Estimation de population par zone** — heatmap des zones denses en animaux errants
+
+### 🤝 Partenariats & Impact
+- **Comptes Association** — 3ème type d'utilisateur (association de protection animale) : valide les fiches, organise captures/stérilisations, voit les zones chaudes
+- **Dons ciblés vers associations** — portés par les **associations partenaires** : "Nourrir ce chat pendant 1 mois = 5$", avec tracking de l'impact réel (repas confirmés). FeedThemAll fournit la plateforme, les fonds vont directement à l'association. **FTA ne prend aucune commission.** Chaque association gère son propre compte Stripe.
+- **Dons directs à FeedThemAll** — bouton "Soutenir l'app" accessible depuis le profil et la page À propos. Montants suggérés : **5$ · 10$ · montant libre**. Entièrement volontaire, aucune fonctionnalité bloquée. Devise de base : **USD**. Multi-devises prévu (auto-détection pays via IP, taux Stripe).
+- **Tableau de bord association** — stats d'animaux nourris, zones actives, bénévoles actifs cette semaine
+
+### 🎮 Gamification avancée
+- **Quêtes** — "Nourris 3 animaux différents cette semaine" → XP bonus, style quêtes Pokémon
+- **Guildes de quartier** — groupe de Feeders d'un même quartier, score collectif, classement inter-quartiers
+- **Saisons** — remise à zéro du classement tous les 3 mois + récompenses top 10
+- **Titres géographiques** — "Gardien du 11ème", "Légende de Belleville" selon zone et niveau
+
+### 📍 Carte & Temps réel
+- **Mode nuit/jour** — carte qui change visuellement selon l'heure
+- **Zones dangereuses** — signaler circulation dense, chantier pour avertir les Feeders
+- **Itinéraire de nourrissage** — optimisation de l'ordre des pings à nourrir dans une zone
+
+### 📱 Mobile / UX
+- **Mode hors-ligne** — cache local des pings, sync au retour du réseau
+- **Notifications push** — "Animal non nourri depuis 24h près de toi", "Quelqu'un a confirmé ton ping"
+- **Widget home screen** — compteur d'animaux nourris cette semaine
+
+### 🌍 Scalabilité
+- **Multi-villes / Multi-pays** — structure backend multi-région dès le départ
+- **API publique** — données anonymisées accessibles aux associations et chercheurs
+
+### 💳 Monétisation
+- **Premium volontaire** — abonnement non obligatoire pour soutenir l'app. Paliers : **5$/mois · 10$/mois · montant libre**. Avantages : badge profil Premium, absence de publicités, cosmétiques exclusifs (tenue avatar). Aucune fonctionnalité de jeu bloquée.
+- **Paiement** — Stripe (Web + Mobile). Gestion des abonnements récurrents via Stripe Billing. Webhooks Stripe pour activer/désactiver le statut Premium en DB.
+- **Multi-devises** — devise de base USD. Stripe gère la conversion automatique. Affichage dans la devise locale de l'utilisateur (détection via IP ou préférence profil). Phase 2 : EUR, GBP, CAD.
+- **Dons one-shot** — même interface que le Premium mais sans récurrence (via `payment_intent` Stripe).
+
+### Priorités MVP+1
+1. Fiche animal persistante (différenciant émotionnel fort)
+2. Quêtes (boost rétention simple à implémenter)
+3. Comptes Association (partenariats + monétisation B2B)
+
+---
+
 ## Décisions Architecturales Notables
 
 | Décision | Choix | Raison |
