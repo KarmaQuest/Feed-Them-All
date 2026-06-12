@@ -23,6 +23,11 @@
 //   notifie optionnellement un Broadcaster (le Hub WebSocket) pour diffuser l'événement
 //   en temps réel aux clients connectés. Si aucun Broadcaster n'est injecté (nil),
 //   le comportement est identique — la mutation réussit sans broadcast.
+//
+// XPAwarder (Gamification) :
+//   Après chaque action récompensée (Create → signal_animal, Confirm → confirm_presence,
+//   MarkFed → feed, SaveMedia → upload_photo), le Service appelle xpAwarder.AwardXP()
+//   dans une goroutine. Les erreurs XP sont loggées mais ne bloquent jamais la réponse HTTP.
 package pings
 
 import (
@@ -30,6 +35,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime"
 	"net/http"
 	"os"
@@ -84,11 +90,19 @@ type Broadcaster interface {
 	BroadcastPingUpdated(p Ping)
 }
 
+// XPAwarder is the interface implemented by the gamification service.
+// Called after each XP-eligible action. Defined here to avoid circular imports:
+// gamification imports nothing from pings; pings imports nothing from gamification.
+type XPAwarder interface {
+	AwardXP(ctx context.Context, userID, action string) error
+}
+
 // Service holds the business logic for pings.
 type Service struct {
 	store       Store
-	uploadDir   string // local directory where uploaded files are saved
+	uploadDir   string      // local directory where uploaded files are saved
 	broadcaster Broadcaster // optional — nil if WebSocket is not wired
+	xpAwarder   XPAwarder   // optional — nil if gamification is not wired
 }
 
 // NewService creates a Service. uploadDir is read from the UPLOAD_DIR env var,
@@ -106,6 +120,26 @@ func NewService(store Store) *Service {
 // Passing nil disables broadcasts (useful in tests).
 func (s *Service) SetBroadcaster(b Broadcaster) {
 	s.broadcaster = b
+}
+
+// SetXPAwarder injects the gamification service into the pings service.
+// Call this after NewService, before the server starts.
+// Passing nil disables XP awards (useful in tests).
+func (s *Service) SetXPAwarder(a XPAwarder) {
+	s.xpAwarder = a
+}
+
+// tryAwardXP calls xpAwarder.AwardXP in a goroutine so it never blocks the HTTP response.
+// Errors are logged but never propagated.
+func (s *Service) tryAwardXP(userID, action string) {
+	if s.xpAwarder == nil {
+		return
+	}
+	go func() {
+		if err := s.xpAwarder.AwardXP(context.Background(), userID, action); err != nil {
+			slog.Warn("award_xp failed", "user_id", userID, "action", action, "err", err)
+		}
+	}()
 }
 
 // Create validates the request and creates a new ping.
@@ -135,6 +169,8 @@ func (s *Service) Create(ctx context.Context, userID string, req CreatePingReque
 	if s.broadcaster != nil {
 		s.broadcaster.BroadcastPingCreated(ping)
 	}
+	// Award XP: signal_animal (fire-and-forget)
+	s.tryAwardXP(userID, "signal_animal")
 	return ping, nil
 }
 
@@ -176,20 +212,22 @@ func (s *Service) ListNearby(ctx context.Context, q NearbyQuery) ([]Ping, error)
 
 // Confirm marks a ping as "animal still present".
 // Anyone can confirm — it just touches updated_at.
-func (s *Service) Confirm(ctx context.Context, pingID string) error {
+func (s *Service) Confirm(ctx context.Context, pingID, userID string) error {
 	if err := s.store.Confirm(ctx, pingID); err != nil {
 		return fmt.Errorf("pings.Service.Confirm: %w", err)
 	}
 	s.broadcastUpdated(ctx, pingID)
+	s.tryAwardXP(userID, "confirm_presence")
 	return nil
 }
 
 // MarkFed records that the animal at this ping has been fed (sets fed_at).
-func (s *Service) MarkFed(ctx context.Context, pingID string) error {
+func (s *Service) MarkFed(ctx context.Context, pingID, userID string) error {
 	if err := s.store.MarkFed(ctx, pingID); err != nil {
 		return fmt.Errorf("pings.Service.MarkFed: %w", err)
 	}
 	s.broadcastUpdated(ctx, pingID)
+	s.tryAwardXP(userID, "feed")
 	return nil
 }
 
@@ -225,7 +263,7 @@ func (s *Service) broadcastUpdated(ctx context.Context, pingID string) {
 // Accepted formats: JPEG, PNG. Max size: 10 MB.
 // The file is saved to uploadDir/<pingID>/<uuid>.<ext> and the path is stored in DB.
 // Returns the public file path (relative to uploadDir) on success.
-func (s *Service) SaveMedia(ctx context.Context, pingID string, data io.Reader, size int64) (string, error) {
+func (s *Service) SaveMedia(ctx context.Context, pingID, userID string, data io.Reader, size int64) (string, error) {
 	if size > maxUploadSize {
 		return "", ErrInvalidMedia
 	}
@@ -278,6 +316,9 @@ func (s *Service) SaveMedia(ctx context.Context, pingID string, data io.Reader, 
 		_ = os.Remove(dest)
 		return "", fmt.Errorf("pings.SaveMedia db: %w", err)
 	}
+
+	// Award XP: upload_photo (fire-and-forget)
+	s.tryAwardXP(userID, "upload_photo")
 
 	return relativePath, nil
 }

@@ -132,8 +132,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 // Confirm handles PATCH /pings/:id/confirm (JWT required).
 // Signals "the animal is still here" by touching updated_at.
 func (h *Handler) Confirm(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	id := chi.URLParam(r, "id")
-	if err := h.svc.Confirm(r.Context(), id); err != nil {
+	if err := h.svc.Confirm(r.Context(), id, userID); err != nil {
 		slog.Error("Confirm ping failed", "id", id, "err", err)
 		writeError(w, "internal server error", http.StatusInternalServerError)
 		return
@@ -144,8 +149,13 @@ func (h *Handler) Confirm(w http.ResponseWriter, r *http.Request) {
 // MarkFed handles PATCH /pings/:id/fed (JWT required).
 // Records that the animal at this ping has been fed.
 func (h *Handler) MarkFed(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	id := chi.URLParam(r, "id")
-	if err := h.svc.MarkFed(r.Context(), id); err != nil {
+	if err := h.svc.MarkFed(r.Context(), id, userID); err != nil {
 		slog.Error("MarkFed failed", "id", id, "err", err)
 		writeError(w, "internal server error", http.StatusInternalServerError)
 		return
@@ -183,6 +193,11 @@ func (h *Handler) Deactivate(w http.ResponseWriter, r *http.Request) {
 // Accepts a multipart form with a "file" field (JPEG or PNG, max 10 MB).
 // Returns the saved file path on success.
 func (h *Handler) UploadMedia(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	id := chi.URLParam(r, "id")
 
 	// Limit total request size to 10 MB + 1 KB for form overhead
@@ -200,7 +215,7 @@ func (h *Handler) UploadMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	path, err := h.svc.SaveMedia(r.Context(), id, file, header.Size)
+	path, err := h.svc.SaveMedia(r.Context(), id, userID, file, header.Size)
 	if err != nil {
 		if errors.Is(err, ErrInvalidMedia) {
 			writeError(w, err.Error(), http.StatusBadRequest)

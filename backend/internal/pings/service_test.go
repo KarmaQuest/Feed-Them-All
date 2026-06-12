@@ -146,7 +146,7 @@ func TestService_Confirm_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	if err := svc.Confirm(context.Background(), p.ID); err != nil {
+	if err := svc.Confirm(context.Background(), p.ID, "user-1"); err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 }
@@ -160,7 +160,7 @@ func TestService_MarkFed_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	if err := svc.MarkFed(context.Background(), p.ID); err != nil {
+	if err := svc.MarkFed(context.Background(), p.ID, "user-1"); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 

@@ -32,7 +32,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/KarmaQuest/feed-them-all/internal/auth"
+	"github.com/KarmaQuest/feed-them-all/internal/gamification"
 	"github.com/KarmaQuest/feed-them-all/internal/pings"
+	"github.com/KarmaQuest/feed-them-all/internal/users"
 	ws "github.com/KarmaQuest/feed-them-all/internal/websocket"
 )
 
@@ -70,6 +72,10 @@ func main() {
 	authSvc := auth.NewService(authRepo)
 	authHandler := auth.NewHandler(authSvc)
 
+	// --- Wire up gamification ---
+	gamRepo := gamification.NewRepository(db)
+	gamSvc := gamification.NewService(gamRepo)
+
 	// --- Wire up WebSocket hub ---
 	hub := ws.NewHub()
 	go hub.Run()
@@ -78,7 +84,13 @@ func main() {
 	pingsRepo := pings.NewRepository(db)
 	pingsSvc := pings.NewService(pingsRepo)
 	pingsSvc.SetBroadcaster(hub) // inject hub for real-time broadcasts
+	pingsSvc.SetXPAwarder(gamSvc) // inject gamification for XP awards
 	pingsHandler := pings.NewHandler(pingsSvc)
+
+	// --- Wire up users ---
+	usersRepo := users.NewRepository(db)
+	usersSvc := users.NewService(usersRepo)
+	usersHandler := users.NewHandler(usersSvc)
 
 	// --- Wire up WebSocket handler ---
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -136,6 +148,10 @@ func main() {
 	r.Get("/pings/{id}/reports", pingsHandler.ListReports)
 	// WebSocket endpoint (optional JWT via ?token=<JWT>)
 	r.Get("/ws", wsHandler.ServeWS)
+
+	// Users & leaderboard (public)
+	r.Get("/users/{id}/profile", usersHandler.GetProfile)
+	r.Get("/leaderboard", usersHandler.GetLeaderboard)
 
 	// Serve uploaded files
 	uploadDir := os.Getenv("UPLOAD_DIR")
