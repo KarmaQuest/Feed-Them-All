@@ -1,0 +1,33 @@
+# Backend
+backend/.env
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/feedthemall
+backend/feedthemall.exe
+
+# Frontend
+frontend-web/node_modules/
+frontend-web/dist/
+frontend-web/.env
+frontend-web/.env.local
+
+# Mobile
+frontend-mobile/node_modules/
+frontend-mobile/.expo/
+frontend-mobile/dist/
+frontend-mobile/.env
+
+# General
+*.env
+*.env.local
+.DS_Store
+Thumbs.db
+
+# Go
+*.test
+*.out
+vendor/
+
+# IDE
+.vscode/settings.json
+.idea/
