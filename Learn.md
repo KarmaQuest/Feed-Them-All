@@ -13,8 +13,9 @@ FeedThemAll/
 ├── backend/              ← Le "cerveau" : serveur Go qui gère les données et la logique
 │   ├── cmd/api/          ← Le point de départ — c'est ici que le serveur démarre
 │   ├── internal/         ← Le code métier, organisé par thème
-│   │   └── auth/         ← Tout ce qui concerne les comptes et la connexion
-│   ├── migrations/       ← Les instructions pour créer/modifier la base de données
+│   │   ├── auth/         ← Tout ce qui concerne les comptes et la connexion
+│   │   └── pings/        ← Tout ce qui concerne les signalements sur la carte
+│   ├── migrations/       ← Les instructions pour créer/modifier la base de données (5 fichiers)
 │   ├── tests/            ← Pages HTML pour tester l'API depuis un navigateur
 │   └── uploads/          ← Photos uploadées par les utilisateurs (en local)
 │
@@ -59,6 +60,9 @@ Parce qu'en équipe (ou entre ta machine et le serveur de production), tout le m
 | `000001_init.down.sql` | Supprime ces tables (pour "annuler" — dangereux en prod) |
 | `000002_refresh_tokens.up.sql` | Ajoute la table qui stocke les tokens de reconnexion |
 | `000002_refresh_tokens.down.sql` | Supprime cette table |
+| `000003_ping_media.up.sql` | Ajoute la table `ping_media` pour les photos uploadées |
+| `000004_ping_reports.up.sql` | Ajoute la table `ping_reports` pour les signalements |
+| `000005_ping_report_votes.up.sql` | Ajoute la table `ping_report_votes` pour les votes sur signalements |
 
 ### Les tables et leur rôle
 
@@ -247,10 +251,159 @@ Disponible uniquement quand `ENV=development`.
 
 | Phase | Ce qui sera créé |
 |---|---|
-| P2 — Pings | Routes pour créer/lire les signalements sur la carte, upload de photos |
 | P3 — WebSocket | Mise à jour de la carte en temps réel |
 | P4 — Gamification | Système XP, badges, leaderboard |
 | P5/6 — Frontend Web | Interface React avec la carte Leaflet |
 | P7 — Avatars | Sprites pixel art des personnages |
 | P8 — Design | Assets Aseprite / PixelLab.ai |
 | P9 — Mobile | Application React Native |
+
+---
+
+## Le package `pings` — `backend/internal/pings/`
+
+C'est le module qui gère les signalements sur la carte : créer un ping, le retrouver par GPS,
+uploader une photo, le signaler comme problématique, voter sur les signalements.
+
+### Les nouvelles tables en base
+
+| Table | Rôle |
+|---|---|
+| `ping_media` | Photos de preuve liées à un ping (chemin du fichier sur disque) |
+| `ping_reports` | Signalements : "cet animal a disparu", "mauvaise position"... Un seul report par utilisateur par ping |
+| `ping_report_votes` | Votes up/down sur un signalement — permet de mesurer sa crédibilité. Un vote **remplace** le précédent si on change d'avis |
+
+### Le système de signalement (report)
+
+N'importe quel utilisateur connecté peut signaler un ping — **y compris son créateur**.
+Raisons possibles : `wrong_location`, `animal_gone`, `duplicate`, `inappropriate`.
+
+Chaque signalement accumule des votes :
+- **Vote up** → "je confirme ce signalement est valide"
+- **Vote down** → "ce signalement est faux"
+- **Score** = nombre de up − nombre de down
+
+Le frontend peut utiliser ce score pour afficher un badge "douteux" sur un ping très signalé.
+
+### Soft delete — qu'est-ce que c'est ?
+
+Quand on "supprime" un ping, on ne l'efface pas vraiment de la base.
+On passe juste `is_active = false`. Le ping reste en base pour l'historique.
+
+> Avantage : si un animal réapparaît au même endroit, on peut retrouver l'historique.
+> Si on supprimait vraiment, l'information serait perdue pour toujours.
+
+### Upload de photos
+
+Quand un utilisateur envoie une photo :
+1. Le serveur lit les **512 premiers octets** du fichier pour détecter son vrai format (JPEG ou PNG)
+2. Il **ne fait pas confiance** au nom du fichier ni au header envoyé par le client — uniquement aux octets réels
+3. Le fichier est sauvegardé dans `uploads/<pingID>/<uuid>.jpg` sur le disque du serveur
+4. Le chemin relatif est enregistré en base dans `ping_media`
+
+---
+
+## Les tests automatisés — `backend/internal/pings/*_test.go`
+
+### Pourquoi écrire des tests ?
+
+Un test automatisé est un programme qui **vérifie que le code se comporte correctement**.
+Au lieu de devoir retester manuellement après chaque modification, les tests s'exécutent
+en quelques secondes et signalent immédiatement si quelque chose est cassé.
+
+> Analogie : c'est comme une checklist de vol qu'un pilote parcourt avant chaque décollage.
+> Sauf qu'ici la checklist se complète toute seule et prend 0.6 secondes.
+
+### Les 3 fichiers de tests du package `pings`
+
+#### `fake_store_test.go` — La fausse base de données
+
+Pour tester sans lancer PostgreSQL, on crée un **fakeStore** : une implémentation de l'interface `Store`
+qui stocke tout en mémoire (dans des maps Go) au lieu d'une vraie base de données.
+
+```
+Test démarre
+    │
+    ▼
+fakeStore créé (vide, en mémoire)
+    │
+    ▼
+Service branché sur fakeStore (pas sur PostgreSQL)
+    │
+    ▼
+Test s'exécute — les données vivent dans la RAM
+    │
+    ▼
+Test termine — tout est effacé automatiquement
+```
+
+Avantages :
+- Aucun Docker nécessaire
+- Chaque test repart d'une base vide → pas de pollution entre les tests
+- 100x plus rapide qu'une vraie base de données
+
+#### `service_test.go` — Tests de la logique métier
+
+Ces tests vérifient que les **règles** sont bien appliquées :
+
+| Test | Ce qu'il vérifie |
+|---|---|
+| `TestService_Create_InvalidType` | Créer un ping avec `type = "zombie"` → retourne `ErrInvalidType` |
+| `TestService_Deactivate_NotOwner` | Un autre utilisateur tente de supprimer ton ping → retourne `ErrNotOwner` |
+| `TestService_Report_CreatorCanReport` | Le créateur d'un ping peut aussi le signaler lui-même |
+| `TestService_Report_AlreadyReported` | Signaler deux fois le même ping → retourne `ErrAlreadyReported` |
+| `TestService_VoteReport_ChangeVote` | Voter up puis changer pour down → le vote est mis à jour sans erreur |
+| `TestService_ListReports_WithScore` | 1 vote up + 1 vote down → score = 0 |
+
+#### `handler_test.go` — Tests des réponses HTTP
+
+Ces tests vérifient que le serveur renvoie les **bons codes HTTP** dans les bons cas :
+
+| Code HTTP | Signification | Exemple |
+|---|---|---|
+| `201 Created` | Ressource créée avec succès | Ping créé, report créé |
+| `204 No Content` | Action réussie, rien à retourner | Confirmer présence, voter |
+| `400 Bad Request` | Données invalides | Type de ping inconnu, reason invalide |
+| `401 Unauthorized` | Non connecté | Tenter de créer un ping sans token JWT |
+| `403 Forbidden` | Connecté mais pas autorisé | Supprimer le ping de quelqu'un d'autre |
+| `404 Not Found` | Ressource inexistante | Voter sur un report qui n'existe pas |
+| `409 Conflict` | Doublon détecté | Signaler un ping qu'on a déjà signalé |
+
+Pour simuler un utilisateur connecté dans les tests (sans vrais tokens JWT), on utilise
+`auth.NewContextWithUserID(ctx, "user-id")` — une fonction helper qui injecte directement
+l'ID utilisateur dans le contexte de la requête, comme si le middleware JWT l'avait fait.
+
+### Comment lancer les tests
+
+```bash
+cd backend
+go test ./internal/...        # Lance tous les tests (auth + pings)
+go test ./internal/pings/...  # Lance uniquement les tests pings
+go test ./internal/pings/... -v  # Affiche chaque test individuellement
+```
+
+Résultat actuel : **57 tests, 0 échec** (auth : 20, pings : 37).
+
+### C'est quoi une "sentinel error" (erreur sentinelle) ?
+
+C'est une erreur nommée et fixe, déclarée une fois au niveau du package :
+
+```go
+var ErrNotOwner = errors.New("you are not the owner of this ping")
+```
+
+Avantage : le Handler peut comparer avec `errors.Is(err, ErrNotOwner)` pour savoir exactement
+quoi retourner au client. Si on retournait juste un texte libre, impossible de le détecter précisément.
+
+> Analogie : c'est comme des codes d'erreur sur un appareil électroménager.
+> "E3" veut toujours dire la même chose — on sait quoi faire.
+> Un message en texte libre ("quelque chose ne va pas") ne dit rien.
+
+### C'est quoi un upsert ?
+
+Un **upsert** = INSERT ou UPDATE selon si la ligne existe déjà.
+
+Pour les votes : au lieu de bloquer avec une erreur si l'utilisateur a déjà voté,
+on **remplace son vote** par le nouveau. SQL : `INSERT ... ON CONFLICT DO UPDATE SET value = EXCLUDED.value`.
+
+C'est le comportement de YouTube (tu peux changer ton pouce en bas) ou Reddit.
