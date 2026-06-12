@@ -87,6 +87,44 @@
 
 ---
 
+## Phase 4-bis — Backend : Dashboard Admin
+
+> Objectif : permettre la gestion des variables métier (XP, levels, badges, boutique, users) sans toucher au code.
+> Toutes les routes `/admin/*` sont protégées par le rôle `admin` (middleware dédié).
+> Aucune route publique ou Feeder n'est impactée.
+
+- [ ] **PA-01** Migration : table `level_thresholds` (level INT, min_xp INT) + colonne `users.is_banned BOOLEAN`
+  - Initialisation avec les paliers actuels `[0,100,250,500,900,1400,2100,3000,4500,7000]`
+  - `users.service.go` charge les paliers depuis la DB au démarrage (avec fallback hardcodé si table vide)
+- [ ] **PA-02** Package `admin/` — middleware `RequireAdmin` (vérifie `users.role = 'admin'`)
+- [ ] **PA-03** Dashboard utilisateurs
+  - `GET /admin/users?page=&search=` — liste paginée avec filtre nom/email
+  - `PATCH /admin/users/:id` — modifier role (`feeder`/`giver`/`association`/`admin`) ou `is_banned`
+- [ ] **PA-04** Dashboard XP & levels
+  - `GET /admin/xp-actions` — liste toutes les actions avec xp_value + daily_limit
+  - `PUT /admin/xp-actions/:action` — modifier xp_value ou daily_limit
+  - `GET /admin/level-thresholds` — liste les paliers de level
+  - `PUT /admin/level-thresholds` — remplacer tous les paliers (tableau JSON)
+- [ ] **PA-05** Dashboard badges
+  - `GET /admin/badges` — liste tous les badges
+  - `POST /admin/badges` — créer un nouveau badge
+  - `PUT /admin/badges/:id` — modifier label, description ou condition
+  - `DELETE /admin/badges/:id` — supprimer un badge
+- [ ] **PA-06** Dashboard boutique skins
+  - `GET /admin/shop-items` — liste tous les items avatar (skin/outfit/accessory)
+  - `POST /admin/shop-items` — ajouter un nouvel item (slug, name, category, price_cents, unlock_condition)
+  - `PUT /admin/shop-items/:id` — modifier un item existant
+  - `DELETE /admin/shop-items/:id` — retirer un item de la boutique
+- [ ] **PA-07** Dashboard modération pings
+  - `GET /admin/pings?active=true&flagged=true` — liste des pings avec nombre de reports
+  - `DELETE /admin/pings/:id` — désactivation forcée par un admin (sans vérification owner)
+- [ ] **PA-08** Frontend admin (`/admin`) — React, protégé par rôle
+  - Sidebar avec sections : Utilisateurs · XP & Levels · Badges · Boutique · Modération
+  - Chaque section = tableau éditable (inline edit) + boutons action
+  - Pas de Leaflet, pas de pixel art — interface sobre et fonctionnelle
+
+---
+
 ## Phase 5 — Frontend Web : Carte & Pings
 
 - [ ] **P5-01** Intégrer **Leaflet + React-Leaflet** avec fond de carte OpenStreetMap
