@@ -1,7 +1,14 @@
--- ============================================================
--- 000001_init.down.sql
--- Rollback initial schema
--- ============================================================
+-- =============================================================
+-- Migration 000001_init.down.sql — Suppression du schéma initial
+-- =============================================================
+-- Ce fichier ANNULE la migration 000001_init.up.sql.
+-- Il supprime toutes les tables dans l'ordre inverse de leur création
+-- pour respecter les dépendances (clés étrangères).
+--
+-- ATTENTION : exécuter ce fichier supprime TOUTES LES DONNÉES.
+-- Utilisé uniquement en développement pour réinitialiser la base.
+-- Commande : migrate -path ./migrations -database "..." down 1
+-- =============================================================
 
 DROP TABLE IF EXISTS subscriptions;
 DROP TABLE IF EXISTS user_badges;

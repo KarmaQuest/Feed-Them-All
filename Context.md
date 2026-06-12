@@ -123,6 +123,8 @@ fix/*         ← Corrections de bugs
 - Chaque PR doit passer les tests CI avant merge
 - Pas de push direct sur `main` ni `dev`
 - **Règle absolue — push à chaque étape** : chaque tâche ou sous-tâche terminée (P1-01, P1-02…) doit faire l'objet d'un commit + push sur `dev` immédiatement après validation. Aucune étape ne reste en local.
+- **Règle absolue — tests** : ne jamais créer de fichiers de tests ni lancer de phase de test sans accord explicite de l'utilisateur. L'utilisateur doit valider le contenu et le moment des tests.
+- **Règle absolue — commentaires fichiers** : chaque fichier de code (Go, TypeScript, SQL, etc.) doit commencer par un bloc de commentaire expliquant : (1) le rôle du fichier, (2) ce qu'il contient, (3) comment il s'articule avec le reste. Les commentaires sur les fonctions/méthodes doivent être précis et décrire les paramètres, le comportement, et les erreurs possibles.
 
 ---
 

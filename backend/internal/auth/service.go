@@ -1,8 +1,37 @@
+// Package auth — service.go contient toute la logique métier de l'authentification.
+//
+// Le Service est la couche centrale : il reçoit les requêtes du Handler (HTTP),
+// applique les règles métier, puis demande au Store (base de données) de lire/écrire.
+//
+// Flux d'une inscription (Register) :
+//   1. Valide le rôle (feeder / giver / association uniquement)
+//   2. Vérifie que le mot de passe fait au moins 8 caractères
+//   3. Hash le mot de passe avec bcrypt (irréversible, sécurisé)
+//   4. Demande au Store d'insérer l'utilisateur en base
+//   5. Génère un access token JWT (valide 15 min) et un refresh token JWT (valide 7 jours)
+//   6. Stocke un hash SHA-256 du refresh token en base (jamais le token brut)
+//   7. Retourne le TokenResponse + le refresh token brut (pour le cookie)
+//
+// Tokens JWT expliqués :
+//   - Access token  : token court (15 min) envoyé dans le header Authorization.
+//                     Prouve l'identité de l'utilisateur pour chaque requête protégée.
+//   - Refresh token : token long (7 jours) stocké dans un cookie HttpOnly (invisible JS).
+//                     Permet d'obtenir un nouvel access token sans se reconnecter.
+//   - jti (JWT ID)  : identifiant aléatoire unique dans chaque refresh token,
+//                     garantit que deux tokens émis à la même seconde sont différents.
+//
+// Sécurité :
+//   - Le refresh token n'est JAMAIS stocké en clair en base : seulement son hash SHA-256.
+//   - bcrypt est irréversible : même si la base fuite, les mots de passe restent protégés.
+//   - Les erreurs de login ne précisent pas si c'est l'email ou le mot de passe qui est faux
+//     (protection contre l'énumération d'emails).
 package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -29,12 +58,12 @@ const (
 
 // Service holds business logic for authentication.
 type Service struct {
-	repo           *Repository
-	jwtSecret      []byte
+	repo             Store
+	jwtSecret        []byte
 	jwtRefreshSecret []byte
 }
 
-func NewService(repo *Repository) *Service {
+func NewService(repo Store) *Service {
 	secret := os.Getenv("JWT_SECRET")
 	refreshSecret := os.Getenv("JWT_REFRESH_SECRET")
 	if secret == "" || refreshSecret == "" {
@@ -181,10 +210,15 @@ func (s *Service) signToken(user User, ttl time.Duration, secret []byte) (string
 }
 
 func (s *Service) signRefreshToken(user User, ttl time.Duration, secret []byte) (string, error) {
+	jti := make([]byte, 16)
+	if _, err := rand.Read(jti); err != nil {
+		return "", fmt.Errorf("auth.signRefreshToken jti: %w", err)
+	}
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"sub":   user.ID,
 		"email": user.Email,
+		"jti":   hex.EncodeToString(jti), // unique per token — prevents identical signatures
 		"iat":   now.Unix(),
 		"exp":   now.Add(ttl).Unix(),
 	}

@@ -1,3 +1,22 @@
+// Package auth — middleware.go protège les routes qui nécessitent une connexion.
+//
+// Un middleware HTTP est une fonction qui s'exécute AVANT le handler de la route.
+// Ici, il vérifie que chaque requête vers une route protégée contient un JWT valide.
+//
+// Comment ça fonctionne :
+//   1. Le client envoie un header : Authorization: Bearer <access_token>
+//   2. Le middleware extrait le token après "Bearer "
+//   3. Il le valide (signature correcte + non expiré) via Service.ValidateAccessToken
+//   4. Si valide : il injecte l'ID de l'utilisateur dans le contexte de la requête
+//      → les handlers suivants peuvent récupérer cet ID via UserIDFromContext(ctx)
+//   5. Si invalide ou absent : il répond immédiatement 401 Unauthorized
+//      et la requête n'atteint jamais le handler final.
+//
+// Utilisation :
+//   r.Group(func(r chi.Router) {
+//       r.Use(authSvc.Middleware)  // toutes les routes dans ce groupe sont protégées
+//       r.Post("/auth/logout", authHandler.Logout)
+//   })
 package auth
 
 import (

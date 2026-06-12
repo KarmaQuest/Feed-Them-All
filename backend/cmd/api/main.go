@@ -1,3 +1,22 @@
+// Package main — Point d'entrée du serveur FeedThemAll.
+//
+// Ce fichier démarre tout le backend :
+//   - Il lit les variables d'environnement (DATABASE_URL, JWT_SECRET, PORT...)
+//   - Il ouvre un pool de connexions vers PostgreSQL
+//   - Il instancie les couches auth (repository → service → handler)
+//   - Il configure le routeur HTTP (chi) avec les middlewares globaux
+//     (logs, récupération de panics, timeout, CORS)
+//   - Il expose les routes publiques (/auth/register, /auth/login, /auth/refresh)
+//     et protégées (/auth/logout nécessite un JWT valide)
+//   - En mode development, il sert les pages de test depuis /tests/
+//
+// Pour lancer le serveur en local :
+//   cd backend
+//   $env:DATABASE_URL="postgres://fta:fta@localhost:5432/feedthemall?sslmode=disable"
+//   $env:JWT_SECRET="une-clé-secrète"
+//   $env:JWT_REFRESH_SECRET="une-autre-clé-secrète"
+//   $env:ENV="development"
+//   go run ./cmd/api
 package main
 
 import (
@@ -68,6 +87,11 @@ func main() {
 		fmt.Fprintln(w, `{"status":"ok"}`)
 	})
 
+	// Test pages — dev only
+	if os.Getenv("ENV") == "development" {
+		r.Handle("/tests/*", http.StripPrefix("/tests", http.FileServer(http.Dir("./tests"))))
+	}
+
 	// Auth routes (public)
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
@@ -99,13 +123,19 @@ func main() {
 
 // corsMiddleware allows requests from the local frontend in development.
 func corsMiddleware(next http.Handler) http.Handler {
+	allowedOrigins := map[string]bool{
+		"http://localhost:5173": true, // Vite dev server
+		"http://localhost:8080": true, // same-origin (test pages served by Go)
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		env := os.Getenv("ENV")
-		if env == "development" {
-			w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		if os.Getenv("ENV") == "development" {
+			origin := r.Header.Get("Origin")
+			if allowedOrigins[origin] {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			}
 		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

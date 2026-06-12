@@ -1,3 +1,20 @@
+// Package auth — repository.go contient toutes les requêtes SQL du package auth.
+//
+// Repository est l'implémentation concrète de l'interface Store (voir store.go).
+// Il communique directement avec PostgreSQL via pgx (un driver Go pour PostgreSQL).
+// pgxpool gère un "pool" de connexions : plutôt que d'ouvrir/fermer une connexion
+// à chaque requête, il réutilise des connexions existantes pour la performance.
+//
+// Règle importante : ce fichier ne contient AUCUNE logique métier.
+// Il fait uniquement SELECT / INSERT / UPDATE / DELETE et retourne les résultats bruts.
+// Toute logique (validation, règles business) appartient à service.go.
+//
+// Requêtes SQL implémentées :
+//   CreateUser         → INSERT INTO users ... RETURNING (retourne l'utilisateur créé)
+//   GetUserByEmail     → SELECT ... WHERE email = $1 (inclut le hash du mot de passe)
+//   StoreRefreshToken  → INSERT ... ON CONFLICT UPDATE (upsert : crée ou remplace)
+//   GetRefreshToken    → SELECT token_hash WHERE user_id = $1
+//   DeleteRefreshToken → DELETE WHERE user_id = $1 (appelé au logout)
 package auth
 
 import (

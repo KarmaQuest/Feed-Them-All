@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>FeedThemAll — Test Auth</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: monospace; background: #1e1e2e; color: #cdd6f4; padding: 2rem; }
+    h1 { color: #89b4fa; margin-bottom: 2rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    .card { background: #313244; border-radius: 8px; padding: 1.5rem; }
+    h2 { color: #cba6f7; margin-bottom: 1rem; font-size: 1rem; }
+    label { display: block; font-size: 0.8rem; color: #a6adc8; margin-bottom: 0.25rem; margin-top: 0.75rem; }
+    input, select { width: 100%; padding: 0.5rem; background: #1e1e2e; border: 1px solid #45475a; border-radius: 4px; color: #cdd6f4; font-family: monospace; }
+    button { margin-top: 1rem; width: 100%; padding: 0.6rem; background: #89b4fa; color: #1e1e2e; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-family: monospace; }
+    button:hover { background: #b4befe; }
+    .result { margin-top: 1rem; background: #1e1e2e; border-radius: 4px; padding: 0.75rem; font-size: 0.78rem; white-space: pre-wrap; word-break: break-all; min-height: 60px; border-left: 3px solid #45475a; }
+    .result.ok { border-color: #a6e3a1; }
+    .result.err { border-color: #f38ba8; }
+    .status { font-size: 0.75rem; margin-bottom: 0.25rem; }
+    .token-box { margin-top: 1.5rem; background: #313244; border-radius: 8px; padding: 1.5rem; }
+    #stored-token { word-break: break-all; font-size: 0.72rem; color: #a6e3a1; }
+  </style>
+</head>
+<body>
+  <h1>🐾 FeedThemAll — Test Auth</h1>
+
+  <div class="grid">
+
+    <!-- REGISTER -->
+    <div class="card">
+      <h2>📝 POST /auth/register</h2>
+      <label>Email</label>
+      <input id="reg-email" type="email" value="moi@fta.dev" />
+      <label>Username</label>
+      <input id="reg-username" value="MonPseudo" />
+      <label>Password</label>
+      <input id="reg-password" type="password" value="monMotDePasse1" />
+      <label>Role</label>
+      <select id="reg-role">
+        <option value="feeder">feeder</option>
+        <option value="giver">giver</option>
+        <option value="association">association</option>
+        <option value="admin">admin (❌ invalide)</option>
+      </select>
+      <button onclick="register()">Envoyer</button>
+      <div class="result" id="reg-result">—</div>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="card">
+      <h2>🔑 POST /auth/login</h2>
+      <label>Email</label>
+      <input id="login-email" type="email" value="moi@fta.dev" />
+      <label>Password</label>
+      <input id="login-password" type="password" value="monMotDePasse1" />
+      <button onclick="login()">Envoyer</button>
+      <div class="result" id="login-result">—</div>
+    </div>
+
+    <!-- REFRESH -->
+    <div class="card">
+      <h2>🔄 POST /auth/refresh</h2>
+      <p style="font-size:0.8rem;color:#a6adc8">Utilise le cookie HttpOnly posé lors du login.<br>Fonctionne uniquement si login a réussi avant.</p>
+      <button onclick="refresh()">Envoyer</button>
+      <div class="result" id="refresh-result">—</div>
+    </div>
+
+    <!-- HEALTH -->
+    <div class="card">
+      <h2>✅ GET /health</h2>
+      <button onclick="health()">Envoyer</button>
+      <div class="result" id="health-result">—</div>
+    </div>
+
+  </div>
+
+  <!-- ACCESS TOKEN -->
+  <div class="token-box" style="margin-top:2rem">
+    <h2 style="color:#cba6f7;margin-bottom:0.5rem">🎟 Dernier access_token reçu</h2>
+    <div id="stored-token">—</div>
+  </div>
+
+  <script>
+    const BASE = 'http://localhost:8080'
+
+    function show(id, status, body) {
+      const el = document.getElementById(id)
+      const ok = status >= 200 && status < 300
+      el.className = 'result ' + (ok ? 'ok' : 'err')
+      el.textContent = `HTTP ${status}\n\n${typeof body === 'string' ? body : JSON.stringify(body, null, 2)}`
+      if (body?.access_token) {
+        document.getElementById('stored-token').textContent = body.access_token
+      }
+    }
+
+    async function post(path, payload) {
+      const res = await fetch(BASE + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+      const text = await res.text()
+      try { return { status: res.status, body: JSON.parse(text) } }
+      catch { return { status: res.status, body: text } }
+    }
+
+    async function register() {
+      const { status, body } = await post('/auth/register', {
+        email:    document.getElementById('reg-email').value,
+        username: document.getElementById('reg-username').value,
+        password: document.getElementById('reg-password').value,
+        role:     document.getElementById('reg-role').value,
+      })
+      show('reg-result', status, body)
+    }
+
+    async function login() {
+      const { status, body } = await post('/auth/login', {
+        email:    document.getElementById('login-email').value,
+        password: document.getElementById('login-password').value,
+      })
+      show('login-result', status, body)
+    }
+
+    async function refresh() {
+      const { status, body } = await post('/auth/refresh', {})
+      show('refresh-result', status, body)
+    }
+
+    async function health() {
+      const res = await fetch(BASE + '/health', { credentials: 'include' })
+      const body = await res.json()
+      show('health-result', res.status, body)
+    }
+  </script>
+</body>
+</html>

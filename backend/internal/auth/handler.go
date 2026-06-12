@@ -1,3 +1,37 @@
+// Package auth — handler.go expose les routes HTTP de l'authentification.
+//
+// Le Handler est la couche la plus proche du client HTTP.
+// Il reçoit les requêtes, les valide superficiellement, appelle le Service,
+// puis formate la réponse JSON. Il ne contient aucune logique métier.
+//
+// Routes exposées :
+//   POST /auth/register → inscription d'un nouvel utilisateur
+//     - Vérifie que email, username, password sont présents et non vides
+//     - Retourne 201 Created + access_token + infos user en JSON
+//     - Pose le refresh_token dans un cookie HttpOnly (non lisible par JavaScript)
+//     - Rate limiter : 3 requêtes/minute (protection contre les inscriptions en masse)
+//
+//   POST /auth/login → connexion d'un utilisateur existant
+//     - Retourne 200 OK + access_token + infos user
+//     - Rate limiter : 5 requêtes/seconde
+//
+//   POST /auth/refresh → obtenir un nouvel access token sans se reconnecter
+//     - Lit le cookie HttpOnly "refresh_token" automatiquement envoyé par le navigateur
+//     - Si valide : retourne un nouvel access token + un nouveau refresh token (rotation)
+//     - Si invalide ou absent : retourne 401 Unauthorized
+//
+//   POST /auth/logout → déconnexion (route protégée par JWT middleware)
+//     - Supprime le refresh token de la base de données
+//     - Efface le cookie côté client (MaxAge = -1)
+//
+// Codes HTTP retournés :
+//   201 Created      → inscription réussie
+//   200 OK           → login ou refresh réussi
+//   204 No Content   → logout réussi
+//   400 Bad Request  → champ manquant, mot de passe trop court, rôle invalide
+//   401 Unauthorized → credentials incorrects ou token expiré
+//   409 Conflict     → email ou username déjà utilisé
+//   429 Too Many Requests → rate limit dépassé
 package auth
 
 import (

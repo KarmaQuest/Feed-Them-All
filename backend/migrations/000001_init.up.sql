@@ -1,7 +1,24 @@
--- ============================================================
--- 000001_init.up.sql
--- Initial schema for FeedThemAll
--- ============================================================
+-- =============================================================
+-- Migration 000001_init.up.sql — Création du schéma initial
+-- =============================================================
+-- Ce fichier crée toutes les tables de base de données de FeedThemAll.
+-- Il est exécuté UNE SEULE FOIS lors de l'installation (via golang-migrate).
+-- Le suffixe ".up.sql" signifie "appliquer" — le fichier ".down.sql" fait l'inverse.
+--
+-- Tables créées :
+--   users            → comptes utilisateurs (feeder, giver, association)
+--   pings            → signalements géolocalisés d'animaux ou de nourriture disponible
+--   animal_profiles  → fiches persistantes d'animaux errants (créées par tout utilisateur)
+--   ping_animal_links→ lien entre un ping et la fiche d'un animal (un ping peut concerner une fiche connue)
+--   xp_actions       → référentiel des actions qui donnent des points XP (signal, nourrissage...)
+--   badges           → définition des badges débloqués par les utilisateurs
+--   user_badges      → association entre un utilisateur et ses badges gagnés
+--   subscriptions    → abonnements Premium et dons Stripe
+--
+-- Note PostGIS : GEOGRAPHY(POINT, 4326) stocke une position GPS (longitude, latitude)
+-- au format standard WGS84 (celui utilisé par Google Maps, GPS, etc.).
+-- L'index GIST sur pings.location accélère drastiquement les requêtes de proximité.
+-- =============================================================
 
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS postgis;

@@ -1,0 +1,125 @@
+# FeedThemAll — Auth API tests
+# Extension requise : REST Client (humao.rest-client)
+# Clique "Send Request" au-dessus de chaque bloc pour l'exécuter
+
+@baseUrl = http://localhost:8080
+
+### ✅ Health check
+GET {{baseUrl}}/health
+
+###
+
+### 📝 Inscription — succès attendu : 201 Created + access_token
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "moi@fta.dev",
+  "username": "MonPseudo",
+  "password": "monMotDePasse1",
+  "role": "feeder"
+}
+
+###
+
+### 📝 Inscription — rôle Giver
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "resto@fta.dev",
+  "username": "LeResto",
+  "password": "monMotDePasse1",
+  "role": "giver"
+}
+
+###
+
+### 📝 Inscription — rôle Association
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "asso@fta.dev",
+  "username": "AssoProtection",
+  "password": "monMotDePasse1",
+  "role": "association"
+}
+
+###
+
+### ❌ Erreur — email déjà utilisé : attendu 409 Conflict
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "moi@fta.dev",
+  "username": "AutrePseudo",
+  "password": "monMotDePasse1",
+  "role": "feeder"
+}
+
+###
+
+### ❌ Erreur — mot de passe trop court : attendu 400 Bad Request
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "court@fta.dev",
+  "username": "CourtPass",
+  "password": "abc",
+  "role": "feeder"
+}
+
+###
+
+### ❌ Erreur — rôle invalide : attendu 400 Bad Request
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "admin@fta.dev",
+  "username": "AdminUser",
+  "password": "monMotDePasse1",
+  "role": "admin"
+}
+
+###
+
+### 🔑 Connexion — succès attendu : 200 OK + access_token + cookie refresh_token
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "moi@fta.dev",
+  "password": "monMotDePasse1"
+}
+
+###
+
+### ❌ Connexion — mauvais mot de passe : attendu 401 Unauthorized
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "moi@fta.dev",
+  "password": "mauvaisMotDePasse"
+}
+
+###
+
+### ❌ Connexion — email inconnu : attendu 401 Unauthorized
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "inconnu@fta.dev",
+  "password": "monMotDePasse1"
+}
+
+###
+
+### 🔄 Refresh token — attendu : 200 OK + nouvel access_token
+# Le cookie refresh_token est envoyé automatiquement par REST Client si tu as fait un login au-dessus
+POST {{baseUrl}}/auth/refresh

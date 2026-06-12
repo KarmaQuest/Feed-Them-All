@@ -28,7 +28,7 @@
 - [x] **P1-06** Implémenter le refresh token (`POST /auth/refresh`) — cookie HttpOnly 7 jours
 - [x] **P1-07** Middleware d'authentification JWT pour les routes protégées
 - [x] **P1-08** Rate limiting sur `/auth/register` et `/auth/login`
-- [ ] **P1-09** Tests unitaires : package `auth`
+- [x] **P1-09** Tests unitaires : package `auth`
 
 ---
 
