@@ -117,9 +117,13 @@ func main() {
 		r.Patch("/pings/{id}/fed", pingsHandler.MarkFed)
 		r.Delete("/pings/{id}", pingsHandler.Deactivate)
 		r.Post("/pings/{id}/media", pingsHandler.UploadMedia)
+		// Reports (any authenticated user, including ping creator)
+		r.Post("/pings/{id}/report", pingsHandler.Report)
+		r.Post("/pings/{id}/reports/{reportID}/vote", pingsHandler.VoteReport)
 	})
-	// Media listing is public
+	// Public read routes
 	r.Get("/pings/{id}/media", pingsHandler.ListMedia)
+	r.Get("/pings/{id}/reports", pingsHandler.ListReports)
 	// Serve uploaded files
 	uploadDir := os.Getenv("UPLOAD_DIR")
 	if uploadDir == "" {

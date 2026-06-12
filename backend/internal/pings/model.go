@@ -2,16 +2,25 @@
 //
 // Ce fichier contient les types utilisés dans toutes les couches (handler, service, repository) :
 //
-//   Ping            → représente un signalement en base de données.
-//                     Contient les coordonnées GPS (Lat/Lon extraites de GEOGRAPHY),
-//                     le type (animal ou food), l'état (actif/inactif), et les dates.
+//   Ping              → représente un signalement en base de données.
+//                       Contient les coordonnées GPS (Lat/Lon extraites de GEOGRAPHY),
+//                       le type (animal ou food), l'état (actif/inactif), et les dates.
 //
 //   CreatePingRequest → données envoyées par le client pour créer un ping.
 //                       Latitude et longitude sont envoyées en JSON, converties en
 //                       GEOGRAPHY(POINT, 4326) côté repository.
 //
-//   NearbyQuery     → paramètres de la requête GET /pings :
-//                       Lat/Lon du centre, rayon en mètres, type optionnel (animal|food).
+//   NearbyQuery       → paramètres de la requête GET /pings :
+//                         Lat/Lon du centre, rayon en mètres, type optionnel (animal|food).
+//
+//   PingReport        → représente un signalement d'un ping par un utilisateur.
+//                       Reason est un enum : wrong_location | animal_gone | duplicate | inappropriate.
+//                       Score = up_votes - down_votes (calculé en DB par LEFT JOIN).
+//
+//   CreateReportRequest → body JSON de POST /pings/:id/report.
+//
+//   VoteReportRequest → body JSON de POST /pings/:id/reports/:report_id/vote.
+//                       Value : "up" | "down".
 //
 // Règle GPS : longitude toujours en premier dans ST_MakePoint($lon, $lat) — piège classique PostGIS.
 package pings
@@ -46,4 +55,27 @@ type NearbyQuery struct {
 	Lon    float64
 	Radius float64 // metres
 	Type   string  // optional filter: "animal" | "food" | "" (all)
+}
+
+// PingReport represents a report filed by a user about a ping.
+// Score is computed as up_votes - down_votes (via LEFT JOIN on ping_report_votes).
+type PingReport struct {
+	ID         string    `json:"id"`
+	PingID     string    `json:"ping_id"`
+	ReportedBy string    `json:"reported_by"`
+	Reason     string    `json:"reason"`  // wrong_location | animal_gone | duplicate | inappropriate
+	Comment    *string   `json:"comment,omitempty"`
+	Score      int       `json:"score"`   // up - down votes
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// CreateReportRequest is the JSON body for POST /pings/:id/report.
+type CreateReportRequest struct {
+	Reason  string  `json:"reason"`
+	Comment *string `json:"comment,omitempty"`
+}
+
+// VoteReportRequest is the JSON body for POST /pings/:id/reports/:report_id/vote.
+type VoteReportRequest struct {
+	Value string `json:"value"` // "up" or "down"
 }

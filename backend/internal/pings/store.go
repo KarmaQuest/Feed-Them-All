@@ -13,6 +13,10 @@
 //   Deactivate     → soft delete : is_active = false (le ping reste en base pour l'historique)
 //   AddMedia       → insère une ligne dans ping_media (chemin du fichier uploadé)
 //   ListMedia      → retourne les chemins des médias associés à un ping
+//   Report         → insère un signalement ; ErrAlreadyReported si l'utilisateur a déjà signalé ce ping
+//   ListReports    → retourne les signalements d'un ping avec leur score (up - down)
+//   GetReport      → récupère un signalement par son UUID (vérification d'existence)
+//   VoteReport     → insère un vote up/down sur un signalement ; ErrAlreadyVoted si déjà voté
 package pings
 
 import "context"
@@ -47,4 +51,20 @@ type Store interface {
 
 	// ListMedia returns the file paths of all media attached to a ping.
 	ListMedia(ctx context.Context, pingID string) ([]string, error)
+
+	// Report files a report for the given ping by the given user.
+	// Returns ErrAlreadyReported if the user has already reported this ping.
+	Report(ctx context.Context, pingID, userID, reason string, comment *string) (PingReport, error)
+
+	// ListReports returns all reports for a ping with their aggregated score (up - down votes).
+	// Ordered by score descending, then by most recent.
+	ListReports(ctx context.Context, pingID string) ([]PingReport, error)
+
+	// GetReport fetches a single report by its UUID.
+	// Returns ErrNotFound if it does not exist.
+	GetReport(ctx context.Context, reportID string) (PingReport, error)
+
+	// VoteReport casts a vote (up or down) on a report.
+	// Returns ErrAlreadyVoted if the user has already voted on this report.
+	VoteReport(ctx context.Context, reportID, userID, value string) error
 }

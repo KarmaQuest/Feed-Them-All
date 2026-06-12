@@ -12,6 +12,11 @@
 //   - Seul le créateur d'un ping peut le désactiver (ErrNotOwner sinon)
 //   - Upload : validation du type MIME (lecture des 512 premiers octets),
 //     taille max 10 Mo, seuls JPEG et PNG sont acceptés
+//   - Signalement : reason doit être dans l'enum défini (ErrInvalidReason sinon)
+//     Un utilisateur ne peut signaler qu'une fois le même ping (ErrAlreadyReported)
+//   - Vote : value doit être "up" ou "down" (ErrInvalidVote sinon)
+//     Un utilisateur ne peut voter qu'une fois par signalement (ErrAlreadyVoted)
+//     Le signalement doit exister (ErrNotFound sinon)
 package pings
 
 import (
@@ -46,6 +51,18 @@ var (
 
 	// ErrInvalidMedia is returned when the uploaded file is not a JPEG or PNG.
 	ErrInvalidMedia = errors.New("only JPEG and PNG files are accepted (max 10 MB)")
+
+	// ErrInvalidReason is returned when the report reason is not in the allowed enum.
+	ErrInvalidReason = errors.New("reason must be one of: wrong_location, animal_gone, duplicate, inappropriate")
+
+	// ErrAlreadyReported is returned when the user already filed a report on this ping.
+	ErrAlreadyReported = errors.New("you already reported this ping")
+
+	// ErrInvalidVote is returned when the vote value is not "up" or "down".
+	ErrInvalidVote = errors.New("value must be 'up' or 'down'")
+
+	// ErrAlreadyVoted is returned when the user already voted on this report.
+	ErrAlreadyVoted = errors.New("you already voted on this report")
 )
 
 const (
@@ -223,6 +240,53 @@ func (s *Service) SaveMedia(ctx context.Context, pingID string, data io.Reader, 
 // GetMedia returns the list of media paths for a ping.
 func (s *Service) GetMedia(ctx context.Context, pingID string) ([]string, error) {
 	return s.store.ListMedia(ctx, pingID)
+}
+
+// Report validates the reason enum and files a report for the given ping.
+// Any authenticated user (including the ping creator) may report.
+// Returns ErrAlreadyReported if the user already reported this ping.
+func (s *Service) Report(ctx context.Context, pingID, userID string, req CreateReportRequest) (PingReport, error) {
+	validReasons := map[string]bool{
+		"wrong_location": true,
+		"animal_gone":    true,
+		"duplicate":      true,
+		"inappropriate":  true,
+	}
+	if !validReasons[req.Reason] {
+		return PingReport{}, ErrInvalidReason
+	}
+
+	rp, err := s.store.Report(ctx, pingID, userID, req.Reason, req.Comment)
+	if err != nil {
+		return PingReport{}, err // ErrAlreadyReported propagates as-is
+	}
+	return rp, nil
+}
+
+// ListReports returns all reports for a ping, with scores, ordered by score desc.
+func (s *Service) ListReports(ctx context.Context, pingID string) ([]PingReport, error) {
+	reports, err := s.store.ListReports(ctx, pingID)
+	if err != nil {
+		return nil, fmt.Errorf("pings.Service.ListReports: %w", err)
+	}
+	return reports, nil
+}
+
+// VoteReport validates the vote value and casts the vote.
+// The report must exist. Any authenticated user (including the report author or ping creator) may vote.
+// Returns ErrNotFound if the report does not exist.
+// Returns ErrAlreadyVoted if the user already voted on this report.
+func (s *Service) VoteReport(ctx context.Context, reportID, userID string, req VoteReportRequest) error {
+	if req.Value != "up" && req.Value != "down" {
+		return ErrInvalidVote
+	}
+
+	// Verify the report exists before voting
+	if _, err := s.store.GetReport(ctx, reportID); err != nil {
+		return ErrNotFound
+	}
+
+	return s.store.VoteReport(ctx, reportID, userID, req.Value)
 }
 
 // mimeExtensions is used for validation display only.

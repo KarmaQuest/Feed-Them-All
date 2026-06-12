@@ -6,30 +6,27 @@
 // Routes exposées (toutes dans main.go) :
 //
 //   GET  /pings?lat=&lon=&radius=&type=  → lister les pings proches (public)
-//        Paramètres : lat (requis), lon (requis), radius (défaut 500 m, max 10 000 m),
-//                     type (optionnel : "animal" | "food")
-//        Retourne : 200 OK + tableau JSON de Ping
-//
 //   POST /pings                          → créer un ping (JWT requis)
-//        Body JSON : { "type": "animal"|"food", "lat": float, "lon": float }
-//        Retourne : 201 Created + le Ping créé
-//
 //   PATCH /pings/:id/confirm             → confirmer "l'animal est toujours là" (JWT requis)
-//        Retourne : 204 No Content
-//
 //   PATCH /pings/:id/fed                 → marquer un animal comme nourri (JWT requis)
-//        Retourne : 204 No Content
-//
 //   DELETE /pings/:id                    → désactiver un ping (JWT requis, propriétaire uniquement)
+//   POST /pings/:id/media                → uploader une photo de preuve (JWT requis)
+//   GET  /pings/:id/media                → lister les médias d'un ping (public)
+//
+//   POST /pings/:id/report               → signaler un ping (JWT requis, tout utilisateur)
+//        Body JSON : { "reason": "wrong_location|animal_gone|duplicate|inappropriate", "comment": "..." }
+//        Retourne : 201 Created + PingReport
+//        Erreur 409 si déjà signalé par cet utilisateur
+//        Erreur 400 si reason invalide
+//
+//   GET  /pings/:id/reports              → lister les signalements d'un ping (public)
+//        Retourne : 200 OK + tableau de PingReport avec scores
+//
+//   POST /pings/:id/reports/:report_id/vote → voter sur un signalement (JWT requis, tout utilisateur)
+//        Body JSON : { "value": "up"|"down" }
 //        Retourne : 204 No Content
-//        Erreur 403 si l'utilisateur n'est pas le créateur du ping
-//
-//   POST /pings/:id/media               → uploader une photo de preuve (JWT requis)
-//        Body : multipart/form-data, champ "file", JPEG ou PNG uniquement, max 10 MB
-//        Retourne : 201 Created + { "path": "..." }
-//
-//   GET  /pings/:id/media               → lister les médias d'un ping (public)
-//        Retourne : 200 OK + tableau de chemins
+//        Erreur 404 si le signalement n'existe pas
+//        Erreur 409 si déjà voté
 package pings
 
 import (
@@ -231,6 +228,92 @@ func (h *Handler) ListMedia(w http.ResponseWriter, r *http.Request) {
 		paths = []string{}
 	}
 	writeJSON(w, http.StatusOK, paths)
+}
+
+// Report handles POST /pings/:id/report (JWT required).
+// Any authenticated user (including the ping creator) may file a report.
+// Returns 409 Conflict if the user already reported this ping.
+func (h *Handler) Report(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	pingID := chi.URLParam(r, "id")
+
+	var req CreateReportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	rp, err := h.svc.Report(r.Context(), pingID, userID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrInvalidReason):
+			writeError(w, err.Error(), http.StatusBadRequest)
+		case errors.Is(err, ErrAlreadyReported):
+			writeError(w, err.Error(), http.StatusConflict)
+		default:
+			slog.Error("Report ping failed", "ping_id", pingID, "err", err)
+			writeError(w, "internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, rp)
+}
+
+// ListReports handles GET /pings/:id/reports (public).
+// Returns all reports for a ping with their vote scores.
+func (h *Handler) ListReports(w http.ResponseWriter, r *http.Request) {
+	pingID := chi.URLParam(r, "id")
+	reports, err := h.svc.ListReports(r.Context(), pingID)
+	if err != nil {
+		slog.Error("ListReports failed", "ping_id", pingID, "err", err)
+		writeError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if reports == nil {
+		reports = []PingReport{}
+	}
+	writeJSON(w, http.StatusOK, reports)
+}
+
+// VoteReport handles POST /pings/:id/reports/:report_id/vote (JWT required).
+// Any authenticated user (including the report author or ping creator) may vote.
+// Returns 404 if the report does not exist, 409 if already voted.
+func (h *Handler) VoteReport(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	reportID := chi.URLParam(r, "reportID")
+
+	var req VoteReportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err := h.svc.VoteReport(r.Context(), reportID, userID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrInvalidVote):
+			writeError(w, err.Error(), http.StatusBadRequest)
+		case errors.Is(err, ErrNotFound):
+			writeError(w, "report not found", http.StatusNotFound)
+		case errors.Is(err, ErrAlreadyVoted):
+			writeError(w, err.Error(), http.StatusConflict)
+		default:
+			slog.Error("VoteReport failed", "report_id", reportID, "err", err)
+			writeError(w, "internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // --- helpers ---

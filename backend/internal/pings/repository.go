@@ -19,15 +19,21 @@
 //   Soft delete               → on met is_active = false au lieu de DELETE,
 //                               pour conserver l'historique des pings.
 //
-// La table ping_media n'est pas dans la migration initiale — elle sera ajoutée
-// dans la migration 000003.
+//   Violations de contrainte unique (code PgError 23505) :
+//     - ping_reports(ping_id, reported_by) → ErrAlreadyReported
+//     - ping_report_votes(report_id, user_id) → ErrAlreadyVoted
+//
+// La table ping_media est ajoutée dans la migration 000003.
+// Les tables ping_reports et ping_report_votes sont ajoutées dans les migrations 000004 et 000005.
 package pings
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -239,6 +245,96 @@ func (r *Repository) ListMedia(ctx context.Context, pingID string) ([]string, er
 		paths = append(paths, p)
 	}
 	return paths, rows.Err()
+}
+
+// Report inserts a new report for the given ping.
+// Returns ErrAlreadyReported if the user already filed a report on this ping (unique constraint).
+func (r *Repository) Report(ctx context.Context, pingID, userID, reason string, comment *string) (PingReport, error) {
+	const q = `
+		INSERT INTO ping_reports (ping_id, reported_by, reason, comment)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, ping_id, reported_by, reason, comment, created_at
+	`
+	var rp PingReport
+	err := r.db.QueryRow(ctx, q, pingID, userID, reason, comment).Scan(
+		&rp.ID, &rp.PingID, &rp.ReportedBy, &rp.Reason, &rp.Comment, &rp.CreatedAt,
+	)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return PingReport{}, ErrAlreadyReported
+		}
+		return PingReport{}, fmt.Errorf("pings.Report: %w", err)
+	}
+	return rp, nil
+}
+
+// listReportsQuery returns reports with computed score (up - down) for a given ping or single report.
+// scoreQuery is used by both ListReports and GetReport.
+const scoreQuery = `
+	SELECT
+		pr.id,
+		pr.ping_id,
+		pr.reported_by,
+		pr.reason,
+		pr.comment,
+		pr.created_at,
+		COALESCE(SUM(CASE WHEN prv.value = 'up' THEN 1 WHEN prv.value = 'down' THEN -1 ELSE 0 END), 0) AS score
+	FROM ping_reports pr
+	LEFT JOIN ping_report_votes prv ON prv.report_id = pr.id
+`
+
+// ListReports returns all reports for a ping with aggregated vote scores.
+func (r *Repository) ListReports(ctx context.Context, pingID string) ([]PingReport, error) {
+	q := scoreQuery + `WHERE pr.ping_id = $1 GROUP BY pr.id ORDER BY score DESC, pr.created_at DESC`
+	rows, err := r.db.Query(ctx, q, pingID)
+	if err != nil {
+		return nil, fmt.Errorf("pings.ListReports: %w", err)
+	}
+	defer rows.Close()
+
+	var reports []PingReport
+	for rows.Next() {
+		var rp PingReport
+		if err := rows.Scan(
+			&rp.ID, &rp.PingID, &rp.ReportedBy, &rp.Reason,
+			&rp.Comment, &rp.CreatedAt, &rp.Score,
+		); err != nil {
+			return nil, fmt.Errorf("pings.ListReports scan: %w", err)
+		}
+		reports = append(reports, rp)
+	}
+	return reports, rows.Err()
+}
+
+// GetReport fetches a single report by UUID with its current vote score.
+// Returns ErrNotFound if no report with that ID exists.
+func (r *Repository) GetReport(ctx context.Context, reportID string) (PingReport, error) {
+	q := scoreQuery + `WHERE pr.id = $1 GROUP BY pr.id`
+	var rp PingReport
+	err := r.db.QueryRow(ctx, q, reportID).Scan(
+		&rp.ID, &rp.PingID, &rp.ReportedBy, &rp.Reason,
+		&rp.Comment, &rp.CreatedAt, &rp.Score,
+	)
+	if err != nil {
+		return PingReport{}, fmt.Errorf("pings.GetReport: %w", ErrNotFound)
+	}
+	return rp, nil
+}
+
+// VoteReport inserts a vote (up/down) on a report.
+// Returns ErrAlreadyVoted if the user already voted on this report (unique constraint).
+func (r *Repository) VoteReport(ctx context.Context, reportID, userID, value string) error {
+	const q = `INSERT INTO ping_report_votes (report_id, user_id, value) VALUES ($1, $2, $3)`
+	_, err := r.db.Exec(ctx, q, reportID, userID, value)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return ErrAlreadyVoted
+		}
+		return fmt.Errorf("pings.VoteReport: %w", err)
+	}
+	return nil
 }
 
 // roundCoord rounds a GPS coordinate to 4 decimal places (~11 m precision).
