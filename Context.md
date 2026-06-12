@@ -311,6 +311,34 @@ Les agents sont des fichiers `SKILL.md` dans `.github/skills/`, chargés automat
 
 ---
 
+## Hébergement & Déploiement
+
+### WebSocket et serverless — incompatibilité
+Le WebSocket nécessite une **connexion persistante**. Les hébergements de type "serverless" (AWS Lambda, Vercel Functions, Netlify Functions) coupent les connexions après 30 secondes maximum — ils sont donc incompatibles avec FeedThemAll. Il faut un **serveur qui tourne en permanence**.
+
+### Options recommandées
+
+| Option | Prix | Complexité | WebSocket | PostGIS | Uploads |
+|---|---|---|---|---|---|
+| **Hetzner VPS CX21** | ~5€/mois | Moyenne | ✅ | ✅ Docker | ✅ disque local |
+| **Fly.io** | ~5-10€/mois | Faible | ✅ natif | ✅ via Fly Postgres | ⚠️ éphémère → R2 |
+| **Railway** | ~5€/mois | Très faible | ✅ | ⚠️ PostGIS non garanti | ⚠️ éphémère |
+| **Render** | ~7€/mois | Faible | ✅ | ✅ | ⚠️ éphémère |
+
+> ⚠️ "Éphémère" signifie que les fichiers uploadés disparaissent à chaque redéploiement. En production, les photos doivent être stockées sur un service externe (Cloudflare R2 ou AWS S3).
+
+### Recommandation par stade
+
+**MVP / dev seul → Hetzner VPS CX21 (~5€/mois)**
+- Un seul serveur Linux, Docker Compose, tout dessus : Go + PostgreSQL+PostGIS + fichiers
+- Zéro complexité supplémentaire, pas de services séparés à gérer
+- Exactement ce qu'on a en local, déployé sur un vrai serveur distant
+
+**Si l'app grandit (beaucoup d'utilisateurs) :**
+- Fly.io (backend Go) + Supabase (PostgreSQL+PostGIS managé) + Cloudflare R2 (photos)
+
+---
+
 ## Décisions Architecturales Notables
 
 | Décision | Choix | Raison |

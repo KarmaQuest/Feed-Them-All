@@ -319,6 +319,44 @@ En faisant le WebSocket d'abord, le frontend peut se connecter directement à un
 
 ---
 
+## Hébergement — quel serveur pour FeedThemAll ?
+
+### WebSocket et serverless — incompatibilité
+
+Un WebSocket a besoin d'une **connexion qui reste ouverte** entre le client et le serveur.
+Certains hébergements dits "serverless" (AWS Lambda, Vercel, Netlify...) **éteignent automatiquement le serveur** après 30 secondes d'inactivité pour économiser des ressources. Résultat : la connexion WebSocket est coupée.
+
+> Analogie : c'est comme louer une salle de réunion qui se verrouille automatiquement toutes les 30 secondes. Pour une réunion longue, il faut une salle classique qui reste ouverte.
+
+Pour FeedThemAll, il faut donc un **serveur qui tourne en permanence**.
+
+### Comparaison des options
+
+| Option | Prix | Facilité | WebSocket | PostGIS | Photos uploadées |
+|---|---|---|---|---|---|
+| **Hetzner VPS CX21** | ~5€/mois | Moyenne (Linux) | ✅ | ✅ via Docker | ✅ disque local |
+| **Fly.io** | ~5-10€/mois | Facile | ✅ | ✅ | ⚠️ disparaissent au redéploiement |
+| **Railway** | ~5€/mois | Très facile | ✅ | ⚠️ non garanti | ⚠️ disparaissent |
+| **Render** | ~7€/mois | Facile | ✅ | ✅ | ⚠️ disparaissent |
+
+**"Photos disparaissent"** : sur les hébergements cloud modernes, chaque mise à jour du serveur repart d'une image vierge. Les photos uploadées par les utilisateurs sont effacées. Solution : les stocker sur un service externe comme **Cloudflare R2** ou **AWS S3** qui garde les fichiers séparément du serveur.
+
+### Recommandation selon le stade du projet
+
+**Phase actuelle (dev local) → tout tourne sur ta machine.** Aucun serveur requis.
+
+**MVP / premiers utilisateurs → Hetzner VPS CX21 (~5€/mois)**
+- Un seul serveur Linux, Docker Compose : Go + PostgreSQL+PostGIS + photos sur le même disque
+- Même configuration qu'en local, juste sur une machine distante
+- Pas de services séparés à gérer, pas de surprise de facturation
+
+**Si l'app grandit → architecture séparée**
+- Backend Go sur Fly.io
+- PostgreSQL+PostGIS managé via Supabase
+- Photos sur Cloudflare R2 (très peu cher, compatible S3)
+
+---
+
 ## Le package `pings` — `backend/internal/pings/`
 
 C'est le module qui gère les signalements sur la carte : créer un ping, le retrouver par GPS,
