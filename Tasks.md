@@ -23,11 +23,11 @@
 - [x] **P1-01** Créer la migration initiale : tables `users`, `pings`, `animal_profiles`, `xp_actions`, `badges`, `user_badges`, `subscriptions`, `ping_animal_links`
 - [x] **P1-02** Ajouter l'index spatial PostGIS sur `pings.location` (inclus dans `000001_init.up.sql`)
 - [x] **P1-03** Mettre en place `golang-migrate` pour versionner les migrations
-- [ ] **P1-04** Implémenter l'inscription (`POST /auth/register`) — hash bcrypt du mot de passe
-- [ ] **P1-05** Implémenter la connexion (`POST /auth/login`) — retourne access token JWT (15 min)
-- [ ] **P1-06** Implémenter le refresh token (`POST /auth/refresh`) — cookie HttpOnly 7 jours
-- [ ] **P1-07** Middleware d'authentification JWT pour les routes protégées
-- [ ] **P1-08** Rate limiting sur `/auth/register` et `/auth/login`
+- [x] **P1-04** Implémenter l'inscription (`POST /auth/register`) — hash bcrypt du mot de passe
+- [x] **P1-05** Implémenter la connexion (`POST /auth/login`) — retourne access token JWT (15 min)
+- [x] **P1-06** Implémenter le refresh token (`POST /auth/refresh`) — cookie HttpOnly 7 jours
+- [x] **P1-07** Middleware d'authentification JWT pour les routes protégées
+- [x] **P1-08** Rate limiting sur `/auth/register` et `/auth/login`
 - [ ] **P1-09** Tests unitaires : package `auth`
 
 ---
