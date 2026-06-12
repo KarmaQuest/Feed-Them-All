@@ -41,7 +41,7 @@
 - [x] **P2-05** `DELETE /pings/:id` — désactiver un ping (soft delete `is_active = false`)
 - [x] **P2-06** Upload de photo de preuve (`POST /pings/:id/media`) — validation MIME, 10 Mo max, stockage `uploads/`
 - [x] **P2-07** Servir les fichiers `uploads/` via un handler Go statique
-- [ ] **P2-08** Signalement et votes sur les pings
+- [x] **P2-08** Signalement et votes sur les pings
   - `POST /pings/:id/report` — signaler un problème sur un ping
     - Accessible à **tout utilisateur authentifié, y compris le créateur du ping**
     - Champs : `reason` (enum : `wrong_location` \| `animal_gone` \| `duplicate` \| `inappropriate`) + `comment` (optionnel)
