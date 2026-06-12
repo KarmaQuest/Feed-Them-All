@@ -71,13 +71,13 @@
 
 ## Phase 4 — Backend : Gamification
 
-- [ ] **P4-01** Créer la table `xp_actions` avec les valeurs par défaut (signaler, nourrir, uploader, confirmer)
-- [ ] **P4-02** Fonction `award_xp(user_id, action)` — calcul côté serveur, rate limiting anti-triche
-- [ ] **P4-03** Appeler `award_xp` automatiquement après chaque action éligible
-- [ ] **P4-04** Créer la table `badges` et les règles de déverrouillage
-- [ ] **P4-05** Job asynchrone (goroutine) pour vérifier et déverrouiller les badges
-- [ ] **P4-06** `GET /users/:id/profile` — retourne XP, niveau, badges, avatar config
-- [ ] **P4-07** `GET /leaderboard` — top 20 utilisateurs par XP (avec cache en mémoire, TTL 5 min)
+- [x] **P4-01** Créer la table `xp_actions` avec les valeurs par défaut (signaler, nourrir, uploader, confirmer)
+- [x] **P4-02** Fonction `award_xp(user_id, action)` — calcul côté serveur, rate limiting anti-triche
+- [x] **P4-03** Appeler `award_xp` automatiquement après chaque action éligible
+- [x] **P4-04** Créer la table `badges` et les règles de déverrouillage
+- [x] **P4-05** Job asynchrone (goroutine) pour vérifier et déverrouiller les badges
+- [x] **P4-06** `GET /users/:id/profile` — retourne XP, niveau, badges, avatar config
+- [x] **P4-07** `GET /leaderboard` — top 20 utilisateurs par XP (avec cache en mémoire, TTL 5 min)
 - [ ] **P4-08** Système d'inventaire avatars
   - Migration : table `avatar_items` (id, slug, name, category `skin|outfit|accessory`, price_cents, unlock_condition)
   - Migration : table `user_avatar_items` (user_id FK, item_id FK, acquired_at, source `quest|purchase`)
