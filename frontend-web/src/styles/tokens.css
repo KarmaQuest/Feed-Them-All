@@ -1,0 +1,103 @@
+/* =============================================================
+   src/styles/tokens.css — Design tokens FeedThemAll
+   Toutes les valeurs de la charte sont définies ici UNE SEULE FOIS.
+   Aucune couleur ou valeur en dur dans les autres fichiers CSS.
+   ============================================================= */
+
+:root {
+
+  /* ── Couleurs de fond ───────────────────────────────────────── */
+  --bg-base:      #0f1117;  /* fond global de l'app */
+  --bg-surface:   #1a1d27;  /* cartes, sidebar, modals */
+  --bg-elevated:  #21253a;  /* éléments au-dessus de surface */
+  --bg-input:     #0f1117;  /* champs de saisie */
+
+  /* ── Bordures ───────────────────────────────────────────────── */
+  --border-subtle:  #2a2d3a;  /* séparateurs principaux */
+  --border-muted:   #1e2130;  /* séparateurs discrets (lignes tableau) */
+  --border-strong:  #374151;  /* bordures visibles (inputs, boutons) */
+
+  /* ── Textes ─────────────────────────────────────────────────── */
+  --text-primary:  #e8eaf6;  /* titres, contenu principal */
+  --text-secondary: #d1d5db; /* contenu standard */
+  --text-muted:    #9ca3af;  /* labels, sous-titres */
+  --text-faint:    #6b7280;  /* textes très discrets */
+  --text-disabled: #4b5563;  /* éléments désactivés */
+
+  /* ── Couleur primaire (indigo) ──────────────────────────────── */
+  --primary:        #6366f1;
+  --primary-hover:  #4f46e5;
+  --primary-light:  #818cf8;
+  --primary-lighter: #a5b4fc;
+  --primary-faint:  #c7d2fe;
+  --primary-bg:     rgba(99, 102, 241, 0.12);
+  --primary-bg-hover: rgba(99, 102, 241, 0.22);
+  --primary-border: rgba(99, 102, 241, 0.25);
+
+  /* ── Succès (vert) ──────────────────────────────────────────── */
+  --success:        #34d399;
+  --success-bg:     rgba(16, 185, 129, 0.12);
+  --success-border: rgba(16, 185, 129, 0.25);
+  --success-hover:  #047857;
+
+  /* ── Avertissement (orange) ─────────────────────────────────── */
+  --warning:        #fbbf24;
+  --warning-bg:     rgba(245, 158, 11, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.25);
+
+  /* ── Danger (rouge) ─────────────────────────────────────────── */
+  --danger:        #f87171;
+  --danger-bg:     rgba(239, 68, 68, 0.10);
+  --danger-bg-hover: rgba(239, 68, 68, 0.20);
+  --danger-border: rgba(239, 68, 68, 0.25);
+
+  /* ── Info (bleu) ────────────────────────────────────────────── */
+  --info:        #60a5fa;
+  --info-bg:     rgba(59, 130, 246, 0.12);
+  --info-border: rgba(59, 130, 246, 0.25);
+
+  /* ── Roles utilisateur ──────────────────────────────────────── */
+  --role-admin-color: #818cf8;
+  --role-admin-bg:    rgba(99, 102, 241, 0.18);
+  --role-feeder-color: #34d399;
+  --role-feeder-bg:    rgba(16, 185, 129, 0.14);
+  --role-giver-color:  #fbbf24;
+  --role-giver-bg:     rgba(245, 158, 11, 0.14);
+  --role-association-color: #60a5fa;
+  --role-association-bg:    rgba(59, 130, 246, 0.14);
+
+  /* ── Border radius ──────────────────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:  10px;
+  --radius-full: 9999px;
+
+  /* ── Transitions ────────────────────────────────────────────── */
+  --transition: 0.15s ease;
+
+  /* ── Typographie ────────────────────────────────────────────── */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+
+  --text-xs:   0.75rem;    /* 12px */
+  --text-sm:   0.8125rem;  /* 13px */
+  --text-base: 0.875rem;   /* 14px */
+  --text-md:   0.9375rem;  /* 15px */
+  --text-lg:   1rem;       /* 16px */
+  --text-xl:   1.125rem;   /* 18px */
+  --text-2xl:  1.25rem;    /* 20px */
+
+  /* ── Spacing ────────────────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* ── Z-index ────────────────────────────────────────────────── */
+  --z-modal:   50;
+  --z-overlay: 40;
+}

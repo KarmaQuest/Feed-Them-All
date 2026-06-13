@@ -1,16 +1,13 @@
-// src/pages/admin/sections/XPSection.tsx — Dashboard XP et Levels.
+// src/pages/admin/sections/XPSection.tsx — Actions XP.
 //
-// Deux tableaux : xp_actions (inline edit + creation) + level_thresholds (inline edit + ajout).
-// Le changement des paliers de level recharge la config cote serveur (users.Service).
+// Tableau des xp_actions : inline edit (xp_value + daily_limit) + création.
+// Les paliers de level sont dans LevelsSection.tsx.
 import { useState, useEffect } from 'react'
 import {
   listXPActions,
   updateXPAction,
   createXPAction,
-  listThresholds,
-  replaceThresholds,
   type AdminXPAction,
-  type LevelThreshold,
 } from '../../../api/admin'
 
 const EMPTY_NEW_ACTION = { action: '', xp_value: '10', daily_limit: '5' }
@@ -18,11 +15,8 @@ const EMPTY_NEW_ACTION = { action: '', xp_value: '10', daily_limit: '5' }
 export default function XPSection() {
   const [actions, setActions] = useState<AdminXPAction[]>([])
   const [editActions, setEditActions] = useState<Record<string, { xp_value: string; daily_limit: string }>>({})
-  const [editThresholds, setEditThresholds] = useState<LevelThreshold[]>([])
   const [savingAction, setSavingAction] = useState<string | null>(null)
-  const [savingThresholds, setSavingThresholds] = useState(false)
   const [savedAction, setSavedAction] = useState<string | null>(null)
-  const [savedThresholds, setSavedThresholds] = useState(false)
   const [newAction, setNewAction] = useState({ ...EMPTY_NEW_ACTION })
   const [creatingAction, setCreatingAction] = useState(false)
   const [createActionError, setCreateActionError] = useState('')
@@ -34,7 +28,6 @@ export default function XPSection() {
       data.forEach((a) => { init[a.action] = { xp_value: String(a.xp_value), daily_limit: String(a.daily_limit) } })
       setEditActions(init)
     })
-    listThresholds().then((data) => { setEditThresholds(data.map((t) => ({ ...t }))) })
   }, [])
 
   async function saveAction(action: string) {
@@ -82,36 +75,11 @@ export default function XPSection() {
     }
   }
 
-  async function saveThresholds() {
-    setSavingThresholds(true)
-    try {
-      await replaceThresholds(editThresholds)
-      setSavedThresholds(true)
-      setTimeout(() => setSavedThresholds(false), 1500)
-    } finally {
-      setSavingThresholds(false)
-    }
-  }
-
-  function addThresholdRow() {
-    const maxLevel = editThresholds.length > 0
-      ? Math.max(...editThresholds.map((t) => t.level))
-      : 0
-    setEditThresholds((prev) => [...prev, { level: maxLevel + 1, min_xp: 0 }])
-  }
-
-  function removeThresholdRow(i: number) {
-    setEditThresholds((prev) => prev.filter((_, idx) => idx !== i))
-  }
-
   return (
     <div>
-      <h2 className="admin-section-title">XP &amp; Levels</h2>
+      <h2 className="admin-section-title">Actions XP</h2>
 
-      <h3 style={{ color: '#9ca3af', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
-        Actions XP
-      </h3>
-      <div className="admin-table-wrapper" style={{ marginBottom: '2rem' }}>
+      <div className="admin-table-wrapper">
         <table className="admin-table">
           <thead>
             <tr>
@@ -172,59 +140,6 @@ export default function XPSection() {
           </tbody>
         </table>
         {createActionError && <p className="error-msg">{createActionError}</p>}
-      </div>
-
-      <div className="section-toolbar">
-        <h3 style={{ color: '#9ca3af', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
-          Paliers de Level
-        </h3>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn-add" onClick={addThresholdRow}>+ Ajouter un palier</button>
-          <button className="btn-save" disabled={savingThresholds} onClick={saveThresholds}>
-            {savingThresholds ? '...' : savedThresholds ? 'Sauvegarde' : 'Sauvegarder tout'}
-          </button>
-        </div>
-      </div>
-      <div className="admin-table-wrapper" style={{ marginTop: '0.75rem' }}>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Level</th>
-              <th>XP minimum</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {editThresholds.length === 0 ? (
-              <tr className="loading-row"><td colSpan={3}>Chargement...</td></tr>
-            ) : editThresholds.map((t, i) => (
-              <tr key={i}>
-                <td>
-                  <input className="inline-input" type="number" min={1} value={t.level}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10)
-                      setEditThresholds((prev) => prev.map((x, idx) => idx === i ? { ...x, level: isNaN(v) ? 1 : v } : x))
-                    }}
-                  />
-                </td>
-                <td>
-                  <input className="inline-input" type="number" min={0} value={t.min_xp}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10)
-                      setEditThresholds((prev) => prev.map((x, idx) => idx === i ? { ...x, min_xp: isNaN(v) ? 0 : v } : x))
-                    }}
-                  />
-                </td>
-                <td>
-                  <button className="btn-danger" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
-                    onClick={() => removeThresholdRow(i)}>
-                    x
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   )

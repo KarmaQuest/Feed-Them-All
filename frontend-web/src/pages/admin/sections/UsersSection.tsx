@@ -102,11 +102,11 @@ export default function UsersSection() {
           <button className="btn-add" onClick={() => { setModal(true); setCreateError('') }}>
             + Nouvel utilisateur
           </button>
-          <button className="btn-cancel" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            &larr; Prec.
+          <button className="btn-page" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            &larr; Préc.
           </button>
-          <span className="text-muted" style={{ lineHeight: '2.1' }}>Page {page}</span>
-          <button className="btn-cancel" disabled={users.length < 20} onClick={() => setPage((p) => p + 1)}>
+          <span className="text-muted" style={{ lineHeight: '1.6', fontSize: '0.8rem' }}>Page {page}</span>
+          <button className="btn-page" disabled={users.length < 20} onClick={() => setPage((p) => p + 1)}>
             Suiv. &rarr;
           </button>
         </div>

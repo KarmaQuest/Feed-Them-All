@@ -1,39 +1,47 @@
-/* src/pages/admin/AdminPage.css */
+/* src/pages/admin/AdminPage.css
+   Layout et composants spécifiques au dashboard admin.
+   Aucune couleur en dur — tout passe par les tokens de tokens.css.
+*/
 
 /* ─── Layout ─────────────────────────────────────────────────────────────── */
 .admin-layout {
   display: flex;
   min-height: 100vh;
-  background: #0f1117;
-  color: #e8eaf6;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
 }
 
 /* ─── Sidebar ─────────────────────────────────────────────────────────────── */
 .admin-sidebar {
   width: 220px;
   flex-shrink: 0;
-  background: #1a1d27;
-  border-right: 1px solid #2a2d3a;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-logo {
   padding: 1.25rem 1.25rem 1rem;
-  border-bottom: 1px solid #2a2d3a;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.25rem;
 }
 
 .sidebar-logo h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--text-lg);
   font-weight: 700;
-  color: #e8eaf6;
+  color: var(--text-primary);
 }
 
 .sidebar-logo span {
-  font-size: 0.75rem;
-  color: #6366f1;
+  font-size: var(--text-xs);
+  color: var(--primary);
   font-weight: 500;
 }
 
@@ -50,36 +58,36 @@
   padding: 0.625rem 1.25rem;
   background: none;
   border: none;
-  color: #9ca3af;
-  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-size: var(--text-base);
   cursor: pointer;
   text-align: left;
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--transition), color var(--transition);
   border-radius: 0;
 }
 
 .nav-item:hover {
-  background: rgba(99, 102, 241, 0.08);
-  color: #c7d2fe;
+  background: var(--primary-bg);
+  color: var(--primary-faint);
 }
 
 .nav-item.active {
   background: rgba(99, 102, 241, 0.14);
-  color: #818cf8;
+  color: var(--primary-light);
   font-weight: 600;
 }
 
 .nav-icon {
-  font-size: 1rem;
+  font-size: var(--text-lg);
   width: 1.1rem;
   text-align: center;
 }
 
 .sidebar-footer {
   padding: 1rem 1.25rem;
-  border-top: 1px solid #2a2d3a;
-  font-size: 0.8rem;
-  color: #4b5563;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-disabled);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -87,21 +95,21 @@
 
 .btn-logout {
   background: none;
-  border: 1px solid #374151;
-  color: #9ca3af;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
   padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: border-color 0.12s, color 0.12s;
+  transition: border-color var(--transition), color var(--transition);
 }
 
 .btn-logout:hover {
-  border-color: #6366f1;
-  color: #818cf8;
+  border-color: var(--primary);
+  color: var(--primary-light);
 }
 
-/* ─── Main content ─────────────────────────────────────────────────────────── */
+/* ─── Contenu principal ────────────────────────────────────────────────────── */
 .admin-main {
   flex: 1;
   overflow-y: auto;
@@ -110,40 +118,40 @@
 
 .admin-section-title {
   margin: 0 0 1.5rem;
-  font-size: 1.25rem;
+  font-size: var(--text-2xl);
   font-weight: 700;
-  color: #e8eaf6;
+  color: var(--text-primary);
 }
 
-/* ─── Tables ──────────────────────────────────────────────────────────────── */
+/* ─── Tableaux ────────────────────────────────────────────────────────────── */
 .admin-table-wrapper {
   overflow-x: auto;
-  border: 1px solid #2a2d3a;
-  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
 }
 
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 }
 
 .admin-table th {
-  background: #1a1d27;
-  color: #6b7280;
+  background: var(--bg-surface);
+  color: var(--text-faint);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 0.75rem 1rem;
   text-align: left;
-  border-bottom: 1px solid #2a2d3a;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .admin-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #1e2130;
-  color: #d1d5db;
+  border-bottom: 1px solid var(--border-muted);
+  color: var(--text-secondary);
   vertical-align: middle;
 }
 
@@ -155,115 +163,135 @@
   background: rgba(99, 102, 241, 0.04);
 }
 
-/* ─── Inline editing ──────────────────────────────────────────────────────── */
+/* ─── Édition inline ──────────────────────────────────────────────────────── */
 .inline-input {
-  background: #0f1117;
-  border: 1px solid #374151;
-  border-radius: 4px;
-  color: #e8eaf6;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
   padding: 0.3rem 0.5rem;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
   width: 80px;
 }
 
 .inline-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--primary);
 }
 
 .inline-select {
-  background: #0f1117;
-  border: 1px solid #374151;
-  border-radius: 4px;
-  color: #e8eaf6;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
   padding: 0.3rem 0.5rem;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 }
 
 .inline-select:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--primary);
 }
 
-/* ─── Action buttons ──────────────────────────────────────────────────────── */
+/* ─── Boutons d'action (petits, dans les lignes de tableau) ───────────────── */
 .btn-save {
-  background: #059669;
+  background: var(--success-hover);
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 0.3rem 0.7rem;
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: background 0.12s;
+  transition: filter var(--transition);
 }
 
-.btn-save:hover {
-  background: #047857;
-}
+.btn-save:hover { filter: brightness(1.1); }
 
 .btn-danger {
-  background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: 4px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
   padding: 0.3rem 0.7rem;
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background var(--transition);
 }
 
-.btn-danger:hover {
-  background: rgba(239, 68, 68, 0.22);
-}
+.btn-danger:hover { background: var(--danger-bg-hover); }
 
 .btn-secondary {
-  background: rgba(99, 102, 241, 0.12);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  border-radius: 4px;
+  background: var(--primary-bg);
+  color: var(--primary-lighter);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-sm);
   padding: 0.3rem 0.7rem;
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background var(--transition);
 }
 
-.btn-secondary:hover {
-  background: rgba(99, 102, 241, 0.22);
-}
+.btn-secondary:hover { background: var(--primary-bg-hover); }
 
 .btn-add {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: #6366f1;
+  background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 1rem;
-  transition: background 0.12s;
+  transition: background var(--transition);
 }
 
-.btn-add:hover {
-  background: #4f46e5;
+.btn-add:hover { background: var(--primary-hover); }
+
+/* Dans une barre d'outils, btn-add ne doit pas pousser vers le bas */
+.section-toolbar .btn-add {
+  margin-bottom: 0;
 }
 
-/* ─── Badges ──────────────────────────────────────────────────────────────── */
+/* ─── Boutons de pagination ───────────────────────────────────────────────── */
+.btn-page {
+  background: none;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.55rem;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+  font-family: var(--font-sans);
+}
+
+.btn-page:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary-light);
+}
+
+.btn-page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Badges rôle / statut ────────────────────────────────────────────────── */
 .badge-role {
   display: inline-block;
   padding: 0.15rem 0.5rem;
-  border-radius: 99px;
-  font-size: 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 
-.badge-role.admin { background: rgba(99,102,241,0.18); color: #818cf8; }
-.badge-role.feeder { background: rgba(16,185,129,0.14); color: #34d399; }
-.badge-role.giver { background: rgba(245,158,11,0.14); color: #fbbf24; }
-.badge-role.association { background: rgba(59,130,246,0.14); color: #60a5fa; }
+.badge-role.admin       { background: var(--role-admin-bg);       color: var(--role-admin-color); }
+.badge-role.feeder      { background: var(--role-feeder-bg);      color: var(--role-feeder-color); }
+.badge-role.giver       { background: var(--role-giver-bg);       color: var(--role-giver-color); }
+.badge-role.association { background: var(--role-association-bg); color: var(--role-association-color); }
 
 .badge-status {
   display: inline-block;
@@ -273,8 +301,8 @@
   margin-right: 0.4rem;
 }
 
-.badge-status.active { background: #34d399; }
-.badge-status.inactive { background: #ef4444; }
+.badge-status.active   { background: var(--success); }
+.badge-status.inactive { background: var(--danger); }
 
 /* ─── Modal ───────────────────────────────────────────────────────────────── */
 .modal-overlay {
@@ -284,13 +312,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: var(--z-modal);
 }
 
 .modal-box {
-  background: #1a1d27;
-  border: 1px solid #2a2d3a;
-  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
   padding: 1.75rem;
   width: 100%;
   max-width: 520px;
@@ -300,8 +328,8 @@
 
 .modal-box h3 {
   margin: 0 0 1.25rem;
-  font-size: 1.1rem;
-  color: #e8eaf6;
+  font-size: var(--text-xl);
+  color: var(--text-primary);
 }
 
 .modal-field {
@@ -311,8 +339,8 @@
 .modal-field label {
   display: block;
   margin-bottom: 0.3rem;
-  font-size: 0.8125rem;
-  color: #9ca3af;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
   font-weight: 500;
 }
 
@@ -320,27 +348,28 @@
 .modal-field select,
 .modal-field textarea {
   width: 100%;
-  background: #0f1117;
-  border: 1px solid #2a2d3a;
-  border-radius: 6px;
-  color: #e8eaf6;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
   padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
   box-sizing: border-box;
+  font-family: var(--font-sans);
 }
 
 .modal-field input:focus,
 .modal-field select:focus,
 .modal-field textarea:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--primary);
 }
 
 .modal-field textarea {
   resize: vertical;
   min-height: 80px;
-  font-family: monospace;
-  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
 }
 
 .modal-actions {
@@ -352,34 +381,32 @@
 
 .btn-cancel {
   background: none;
-  border: 1px solid #374151;
-  color: #9ca3af;
-  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
   cursor: pointer;
+  transition: border-color var(--transition);
 }
 
-.btn-cancel:hover {
-  border-color: #6b7280;
-}
+.btn-cancel:hover { border-color: var(--text-faint); }
 
 .btn-submit {
-  background: #6366f1;
+  background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
   font-weight: 600;
   cursor: pointer;
+  transition: background var(--transition);
 }
 
-.btn-submit:hover {
-  background: #4f46e5;
-}
+.btn-submit:hover { background: var(--primary-hover); }
 
-/* ─── Misc ────────────────────────────────────────────────────────────────── */
+/* ─── Barre d'outils (au-dessus des tableaux) ─────────────────────────────── */
 .section-toolbar {
   display: flex;
   align-items: center;
@@ -388,27 +415,33 @@
 }
 
 .search-input {
-  background: #1a1d27;
-  border: 1px solid #2a2d3a;
-  border-radius: 6px;
-  color: #e8eaf6;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
   padding: 0.45rem 0.75rem;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
   width: 220px;
+  font-family: var(--font-sans);
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--primary);
 }
 
-.text-muted { color: #6b7280; font-size: 0.8125rem; }
-.text-red { color: #f87171; }
-.text-green { color: #34d399; }
-.text-mono { font-family: monospace; font-size: 0.8rem; }
-.loading-row td { text-align: center; color: #6b7280; padding: 2rem !important; }
+/* ─── Classes utilitaires héritées (compatibilité sections existantes) ──────
+   Ces classes étaient dans AdminPage.css avant le refactor.
+   Elles sont conservées ici pour ne pas casser les sections non refactorées.
+   À terme, les composants utiliseront les classes u-* de utilities.css.
+   ────────────────────────────────────────────────────────────────────────── */
+.text-muted  { color: var(--text-faint);  font-size: var(--text-sm); }
+.text-red    { color: var(--danger); }
+.text-green  { color: var(--success); }
+.text-mono   { font-family: var(--font-mono); font-size: 0.8rem; }
+.loading-row td { text-align: center; color: var(--text-faint); padding: 2rem !important; }
 
-/* ─── modal-form-grid (label + input en 2 colonnes) ─────────────────────── */
+/* ─── Grille label+input 2 colonnes dans les modals ──────────────────────── */
 .modal-form-grid {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -418,8 +451,8 @@
 }
 
 .modal-form-grid label {
-  font-size: 0.8125rem;
-  color: #9ca3af;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -428,9 +461,9 @@
   width: 100%;
 }
 
-/* ─── error-msg ──────────────────────────────────────────────────────────── */
+/* ─── Message d'erreur inline ─────────────────────────────────────────────── */
 .error-msg {
-  color: #f87171;
-  font-size: 0.8125rem;
+  color: var(--danger);
+  font-size: var(--text-sm);
   margin: 0.4rem 0 0;
 }

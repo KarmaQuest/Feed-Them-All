@@ -8,16 +8,18 @@ import { logout } from '../../api/auth'
 import { useAuthStore } from '../../store/auth'
 import UsersSection from './sections/UsersSection'
 import XPSection from './sections/XPSection'
+import LevelsSection from './sections/LevelsSection'
 import BadgesSection from './sections/BadgesSection'
 import ShopSection from './sections/ShopSection'
 import ModerationSection from './sections/ModerationSection'
 import './AdminPage.css'
 
-type Section = 'users' | 'xp' | 'badges' | 'shop' | 'moderation'
+type Section = 'users' | 'xp' | 'levels' | 'badges' | 'shop' | 'moderation'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'users', label: 'Utilisateurs', icon: '👥' },
-  { id: 'xp', label: 'XP & Levels', icon: '⚡' },
+  { id: 'xp', label: 'Actions XP', icon: '⚡' },
+  { id: 'levels', label: 'Paliers de Level', icon: '📊' },
   { id: 'badges', label: 'Badges', icon: '🏅' },
   { id: 'shop', label: 'Boutique', icon: '🛒' },
   { id: 'moderation', label: 'Modération', icon: '🛡' },
@@ -38,6 +40,7 @@ export default function AdminPage() {
     switch (active) {
       case 'users': return <UsersSection />
       case 'xp': return <XPSection />
+      case 'levels': return <LevelsSection />
       case 'badges': return <BadgesSection />
       case 'shop': return <ShopSection />
       case 'moderation': return <ModerationSection />
