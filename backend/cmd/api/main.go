@@ -212,6 +212,16 @@ func main() {
 		r.Get("/admin/pings", adminHandler.ListPingsAdmin)
 		r.Post("/admin/pings", adminHandler.CreatePingAdmin)
 		r.Delete("/admin/pings/{id}", adminHandler.ForceDeactivatePing)
+		r.Get("/admin/pings/{id}/comments", adminHandler.ListCommentsAdmin)
+		r.Get("/admin/pings/{id}/feedings", adminHandler.ListFeedingEventsAdmin)
+
+		// Comments moderation
+		r.Patch("/admin/comments/{id}", adminHandler.UpdateComment)
+		r.Delete("/admin/comments/{id}", adminHandler.DeleteComment)
+
+		// Feeding events moderation
+		r.Patch("/admin/feedings/{id}", adminHandler.UpdateFeedingEvent)
+		r.Delete("/admin/feedings/{id}", adminHandler.DeleteFeedingEvent)
 	})
 
 	// Serve uploaded files

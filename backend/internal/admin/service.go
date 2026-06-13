@@ -228,3 +228,37 @@ func (s *Service) CreatePingAdmin(ctx context.Context, req AdminCreatePingReques
 	}
 	return s.store.CreatePingAdmin(ctx, req)
 }
+
+// ─── Comments (Moderation) ────────────────────────────────────────────────────
+
+func (s *Service) ListComments(ctx context.Context, pingID string) ([]AdminComment, error) {
+	return s.store.ListComments(ctx, pingID)
+}
+
+func (s *Service) UpdateComment(ctx context.Context, commentID string, req UpdateCommentRequest) error {
+	if len(req.Content) == 0 || len(req.Content) > 500 {
+		return errors.New("content must be between 1 and 500 characters")
+	}
+	return s.store.UpdateComment(ctx, commentID, req)
+}
+
+func (s *Service) DeleteComment(ctx context.Context, commentID string) error {
+	return s.store.DeleteComment(ctx, commentID)
+}
+
+// ─── Feeding Events (Moderation) ──────────────────────────────────────────────
+
+func (s *Service) ListFeedingEventsAdmin(ctx context.Context, pingID string) ([]AdminFeedingEvent, error) {
+	return s.store.ListFeedingEventsAdmin(ctx, pingID)
+}
+
+func (s *Service) UpdateFeedingEvent(ctx context.Context, eventID string, req UpdateFeedingEventRequest) error {
+	if req.AnimalCountSeen != nil && (*req.AnimalCountSeen < 1 || *req.AnimalCountSeen > 100) {
+		return errors.New("animal_count_seen must be between 1 and 100")
+	}
+	return s.store.UpdateFeedingEvent(ctx, eventID, req)
+}
+
+func (s *Service) DeleteFeedingEvent(ctx context.Context, eventID string) error {
+	return s.store.DeleteFeedingEvent(ctx, eventID)
+}

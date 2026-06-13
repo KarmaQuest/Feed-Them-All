@@ -96,4 +96,26 @@ type Store interface {
 	// CreatePingAdmin inserts a new ping on behalf of any user.
 	// Returns the new ping UUID.
 	CreatePingAdmin(ctx context.Context, req AdminCreatePingRequest) (string, error)
+
+	// ── Comments (Moderation) ─────────────────────────────────────────────────
+
+	// ListComments returns all comments for a given ping, newest first.
+	ListComments(ctx context.Context, pingID string) ([]AdminComment, error)
+
+	// UpdateComment edits the content of a comment. Returns ErrNotFound if missing.
+	UpdateComment(ctx context.Context, commentID string, req UpdateCommentRequest) error
+
+	// DeleteComment permanently removes a comment. Returns ErrNotFound if missing.
+	DeleteComment(ctx context.Context, commentID string) error
+
+	// ── Feeding Events (Moderation) ───────────────────────────────────────────
+
+	// ListFeedingEventsAdmin returns all feeding events for a given ping, newest first.
+	ListFeedingEventsAdmin(ctx context.Context, pingID string) ([]AdminFeedingEvent, error)
+
+	// UpdateFeedingEvent edits note/animal_count_seen of an event. Returns ErrNotFound if missing.
+	UpdateFeedingEvent(ctx context.Context, eventID string, req UpdateFeedingEventRequest) error
+
+	// DeleteFeedingEvent permanently removes a feeding event. Returns ErrNotFound if missing.
+	DeleteFeedingEvent(ctx context.Context, eventID string) error
 }

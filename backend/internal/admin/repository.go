@@ -421,6 +421,125 @@ func (r *Repository) CreatePingAdmin(ctx context.Context, req AdminCreatePingReq
 	return id, nil
 }
 
+// ─── Comments (Moderation) ────────────────────────────────────────────────────
+
+const listCommentsAdminQuery = `
+SELECT c.id, c.ping_id, c.author_id, u.username, c.content,
+       to_char(c.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+       to_char(c.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS updated_at
+FROM ping_comments c
+JOIN users u ON u.id = c.author_id
+WHERE c.ping_id = $1
+ORDER BY c.created_at DESC`
+
+func (r *Repository) ListComments(ctx context.Context, pingID string) ([]AdminComment, error) {
+	rows, err := r.db.Query(ctx, listCommentsAdminQuery, pingID)
+	if err != nil {
+		return nil, fmt.Errorf("admin.ListComments: %w", err)
+	}
+	defer rows.Close()
+
+	var comments []AdminComment
+	for rows.Next() {
+		var c AdminComment
+		if err := rows.Scan(&c.ID, &c.PingID, &c.AuthorID, &c.Username, &c.Content, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("admin.ListComments scan: %w", err)
+		}
+		comments = append(comments, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("admin.ListComments rows: %w", err)
+	}
+	if comments == nil {
+		comments = []AdminComment{}
+	}
+	return comments, nil
+}
+
+func (r *Repository) UpdateComment(ctx context.Context, commentID string, req UpdateCommentRequest) error {
+	tag, err := r.db.Exec(ctx,
+		`UPDATE ping_comments SET content = $2, updated_at = NOW() WHERE id = $1`,
+		commentID, req.Content,
+	)
+	if err != nil {
+		return fmt.Errorf("admin.UpdateComment: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *Repository) DeleteComment(ctx context.Context, commentID string) error {
+	tag, err := r.db.Exec(ctx, "DELETE FROM ping_comments WHERE id = $1", commentID)
+	if err != nil {
+		return fmt.Errorf("admin.DeleteComment: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ─── Feeding Events (Moderation) ──────────────────────────────────────────────
+
+const listFeedingEventsAdminQuery = `
+SELECT e.id, e.ping_id, e.fed_by, u.username, e.note, e.animal_count_seen,
+       to_char(e.fed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS fed_at
+FROM ping_feeding_events e
+JOIN users u ON u.id = e.fed_by
+WHERE e.ping_id = $1
+ORDER BY e.fed_at DESC`
+
+func (r *Repository) ListFeedingEventsAdmin(ctx context.Context, pingID string) ([]AdminFeedingEvent, error) {
+	rows, err := r.db.Query(ctx, listFeedingEventsAdminQuery, pingID)
+	if err != nil {
+		return nil, fmt.Errorf("admin.ListFeedingEventsAdmin: %w", err)
+	}
+	defer rows.Close()
+
+	var events []AdminFeedingEvent
+	for rows.Next() {
+		var e AdminFeedingEvent
+		if err := rows.Scan(&e.ID, &e.PingID, &e.FedBy, &e.Username, &e.Note, &e.AnimalCountSeen, &e.FedAt); err != nil {
+			return nil, fmt.Errorf("admin.ListFeedingEventsAdmin scan: %w", err)
+		}
+		events = append(events, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("admin.ListFeedingEventsAdmin rows: %w", err)
+	}
+	if events == nil {
+		events = []AdminFeedingEvent{}
+	}
+	return events, nil
+}
+
+func (r *Repository) UpdateFeedingEvent(ctx context.Context, eventID string, req UpdateFeedingEventRequest) error {
+	tag, err := r.db.Exec(ctx,
+		`UPDATE ping_feeding_events SET note = $2, animal_count_seen = $3 WHERE id = $1`,
+		eventID, req.Note, req.AnimalCountSeen,
+	)
+	if err != nil {
+		return fmt.Errorf("admin.UpdateFeedingEvent: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *Repository) DeleteFeedingEvent(ctx context.Context, eventID string) error {
+	tag, err := r.db.Exec(ctx, "DELETE FROM ping_feeding_events WHERE id = $1", eventID)
+	if err != nil {
+		return fmt.Errorf("admin.DeleteFeedingEvent: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // ─── Users (Create) ───────────────────────────────────────────────────────────
 
 func (r *Repository) CreateUser(ctx context.Context, req CreateUserRequest, passwordHash string) (string, error) {

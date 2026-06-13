@@ -66,6 +66,26 @@ export interface FeedingEvent {
   animal_count_seen?: number | null
 }
 
+export interface AdminComment {
+  id: string
+  ping_id: string
+  author_id: string
+  username: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export interface AdminFeedingEvent {
+  id: string
+  ping_id: string
+  fed_by: string
+  username: string
+  fed_at: string
+  note?: string | null
+  animal_count_seen?: number | null
+}
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 export const listUsers = (page = 1, search = '') =>
@@ -146,3 +166,25 @@ export const createPingAdmin = (body: { user_id: string; type: string; lat: numb
 
 export const getPingFeedingEvents = (pingId: string) =>
   apiClient.get<FeedingEvent[]>(`/pings/${pingId}/feedings`).then((r) => r.data)
+
+// ─── Comments (admin moderation) ─────────────────────────────────────────────
+
+export const listCommentsAdmin = (pingId: string) =>
+  apiClient.get<AdminComment[]>(`/admin/pings/${pingId}/comments`).then((r) => r.data)
+
+export const updateComment = (id: string, content: string) =>
+  apiClient.patch(`/admin/comments/${id}`, { content })
+
+export const deleteComment = (id: string) =>
+  apiClient.delete(`/admin/comments/${id}`)
+
+// ─── Feeding Events (admin moderation) ───────────────────────────────────────
+
+export const listFeedingEventsAdmin = (pingId: string) =>
+  apiClient.get<AdminFeedingEvent[]>(`/admin/pings/${pingId}/feedings`).then((r) => r.data)
+
+export const updateFeedingEvent = (id: string, body: { note?: string | null; animal_count_seen?: number | null }) =>
+  apiClient.patch(`/admin/feedings/${id}`, body)
+
+export const deleteFeedingEvent = (id: string) =>
+  apiClient.delete(`/admin/feedings/${id}`)

@@ -148,3 +148,40 @@ type AdminCreatePingRequest struct {
 	AnimalType  *string `json:"animal_type,omitempty"`
 	AnimalCount *int    `json:"animal_count,omitempty"`
 }
+
+// ─── Comments ─────────────────────────────────────────────────────────────────
+
+// AdminComment is the admin view of a ping comment.
+type AdminComment struct {
+	ID        string `json:"id"`
+	PingID    string `json:"ping_id"`
+	AuthorID  string `json:"author_id"`
+	Username  string `json:"username"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// UpdateCommentRequest is the body of PATCH /admin/comments/:id.
+type UpdateCommentRequest struct {
+	Content string `json:"content"`
+}
+
+// ─── Feeding Events (admin view) ──────────────────────────────────────────────
+
+// AdminFeedingEvent is the admin view of a ping feeding event.
+type AdminFeedingEvent struct {
+	ID              string  `json:"id"`
+	PingID          string  `json:"ping_id"`
+	FedBy           string  `json:"fed_by"`
+	Username        string  `json:"username"`
+	FedAt           string  `json:"fed_at"`
+	Note            *string `json:"note,omitempty"`
+	AnimalCountSeen *int    `json:"animal_count_seen,omitempty"`
+}
+
+// UpdateFeedingEventRequest is the body of PATCH /admin/feedings/:id.
+type UpdateFeedingEventRequest struct {
+	Note            *string `json:"note"`
+	AnimalCountSeen *int    `json:"animal_count_seen,omitempty"`
+}

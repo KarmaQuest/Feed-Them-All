@@ -60,6 +60,14 @@ type adminService interface {
 	ListPingsAdmin(ctx context.Context, activeOnly, flaggedOnly bool) ([]AdminPing, error)
 	ForceDeactivatePing(ctx context.Context, pingID string) error
 	CreatePingAdmin(ctx context.Context, req AdminCreatePingRequest) (string, error)
+
+	ListComments(ctx context.Context, pingID string) ([]AdminComment, error)
+	UpdateComment(ctx context.Context, commentID string, req UpdateCommentRequest) error
+	DeleteComment(ctx context.Context, commentID string) error
+
+	ListFeedingEventsAdmin(ctx context.Context, pingID string) ([]AdminFeedingEvent, error)
+	UpdateFeedingEvent(ctx context.Context, eventID string, req UpdateFeedingEventRequest) error
+	DeleteFeedingEvent(ctx context.Context, eventID string) error
 }
 
 // Handler holds HTTP handlers for admin routes.
@@ -332,6 +340,98 @@ func (h *Handler) CreatePingAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]string{"id": id}, http.StatusCreated)
+}
+
+// ─── Comments (Moderation) ────────────────────────────────────────────────────
+
+// ListCommentsAdmin handles GET /admin/pings/:id/comments
+func (h *Handler) ListCommentsAdmin(w http.ResponseWriter, r *http.Request) {
+	pingID := chi.URLParam(r, "id")
+	comments, err := h.svc.ListComments(r.Context(), pingID)
+	if err != nil {
+		writeError(w, "failed to list comments", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, comments, http.StatusOK)
+}
+
+// UpdateComment handles PATCH /admin/comments/:id
+func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
+	commentID := chi.URLParam(r, "id")
+	var req UpdateCommentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if err := h.svc.UpdateComment(r.Context(), commentID, req); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, "comment not found", http.StatusNotFound)
+			return
+		}
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteComment handles DELETE /admin/comments/:id
+func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	commentID := chi.URLParam(r, "id")
+	if err := h.svc.DeleteComment(r.Context(), commentID); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, "comment not found", http.StatusNotFound)
+			return
+		}
+		writeError(w, "failed to delete comment", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ─── Feeding Events (Moderation) ──────────────────────────────────────────────
+
+// ListFeedingEventsAdmin handles GET /admin/pings/:id/feedings
+func (h *Handler) ListFeedingEventsAdmin(w http.ResponseWriter, r *http.Request) {
+	pingID := chi.URLParam(r, "id")
+	events, err := h.svc.ListFeedingEventsAdmin(r.Context(), pingID)
+	if err != nil {
+		writeError(w, "failed to list feeding events", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, events, http.StatusOK)
+}
+
+// UpdateFeedingEvent handles PATCH /admin/feedings/:id
+func (h *Handler) UpdateFeedingEvent(w http.ResponseWriter, r *http.Request) {
+	eventID := chi.URLParam(r, "id")
+	var req UpdateFeedingEventRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if err := h.svc.UpdateFeedingEvent(r.Context(), eventID, req); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, "feeding event not found", http.StatusNotFound)
+			return
+		}
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteFeedingEvent handles DELETE /admin/feedings/:id
+func (h *Handler) DeleteFeedingEvent(w http.ResponseWriter, r *http.Request) {
+	eventID := chi.URLParam(r, "id")
+	if err := h.svc.DeleteFeedingEvent(r.Context(), eventID); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, "feeding event not found", http.StatusNotFound)
+			return
+		}
+		writeError(w, "failed to delete feeding event", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // CreateUser handles POST /admin/users

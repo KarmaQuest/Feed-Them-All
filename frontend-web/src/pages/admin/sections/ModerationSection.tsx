@@ -2,13 +2,15 @@
 //
 // Tableau des pings avec filtres (actifs / signales).
 // Bouton "Desactiver" force is_active=false sans verifier le proprietaire.
-// Bouton "Historique" ouvre une popup listant tous les feeding events du ping.
-// Bouton "Creer ping" pour injecter un ping manuellement (admin/test),
-//   avec selection du type d'animal et du nombre d'animaux.
+// Bouton "Activites" ouvre une popup listant les feeding events avec edit/delete.
+// Bouton "Commentaires" ouvre une popup listant les commentaires avec edit/delete.
+// Bouton "Creer ping" pour injecter un ping manuellement (admin/test).
 import { useState, useEffect, useCallback } from 'react'
 import {
-  listPingsAdmin, forceDeactivatePing, createPingAdmin, getPingFeedingEvents,
-  type AdminPing, type FeedingEvent,
+  listPingsAdmin, forceDeactivatePing, createPingAdmin,
+  listFeedingEventsAdmin, updateFeedingEvent, deleteFeedingEvent,
+  listCommentsAdmin, updateComment, deleteComment,
+  type AdminPing, type AdminFeedingEvent, type AdminComment,
 } from '../../../api/admin'
 import { useAuthStore } from '../../../store/auth'
 
@@ -31,10 +33,19 @@ export default function ModerationSection() {
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
 
-  // ── History popup ──────────────────────────────────────────────────────────
+  // ── Feeding events popup ────────────────────────────────────────────────────
   const [historyPing, setHistoryPing] = useState<AdminPing | null>(null)
-  const [historyEvents, setHistoryEvents] = useState<FeedingEvent[]>([])
+  const [historyEvents, setHistoryEvents] = useState<AdminFeedingEvent[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<{ id: string; note: string; count: string } | null>(null)
+  const [deletingEvent, setDeletingEvent] = useState<string | null>(null)
+
+  // ── Comments popup ────────────────────────────────────────────────────────
+  const [commentPing, setCommentPing] = useState<AdminPing | null>(null)
+  const [comments, setComments] = useState<AdminComment[]>([])
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const [editingComment, setEditingComment] = useState<{ id: string; content: string } | null>(null)
+  const [deletingComment, setDeletingComment] = useState<string | null>(null)
 
   const fetchPings = useCallback(async () => {
     setLoading(true)
@@ -61,13 +72,70 @@ export default function ModerationSection() {
   async function handleOpenHistory(ping: AdminPing) {
     setHistoryPing(ping)
     setHistoryEvents([])
+    setEditingEvent(null)
     setHistoryLoading(true)
     try {
-      const events = await getPingFeedingEvents(ping.id)
+      const events = await listFeedingEventsAdmin(ping.id)
       setHistoryEvents(events)
     } finally {
       setHistoryLoading(false)
     }
+  }
+
+  async function handleDeleteEvent(id: string) {
+    setDeletingEvent(id)
+    try {
+      await deleteFeedingEvent(id)
+      setHistoryEvents((prev) => prev.filter((e) => e.id !== id))
+    } finally {
+      setDeletingEvent(null)
+    }
+  }
+
+  async function handleSaveEvent() {
+    if (!editingEvent) return
+    await updateFeedingEvent(editingEvent.id, {
+      note: editingEvent.note || null,
+      animal_count_seen: editingEvent.count ? parseInt(editingEvent.count, 10) : null,
+    })
+    setHistoryEvents((prev) => prev.map((e) =>
+      e.id === editingEvent.id
+        ? { ...e, note: editingEvent.note || null, animal_count_seen: editingEvent.count ? parseInt(editingEvent.count, 10) : null }
+        : e
+    ))
+    setEditingEvent(null)
+  }
+
+  async function handleOpenComments(ping: AdminPing) {
+    setCommentPing(ping)
+    setComments([])
+    setEditingComment(null)
+    setCommentsLoading(true)
+    try {
+      const data = await listCommentsAdmin(ping.id)
+      setComments(data)
+    } finally {
+      setCommentsLoading(false)
+    }
+  }
+
+  async function handleDeleteComment(id: string) {
+    setDeletingComment(id)
+    try {
+      await deleteComment(id)
+      setComments((prev) => prev.filter((c) => c.id !== id))
+    } finally {
+      setDeletingComment(null)
+    }
+  }
+
+  async function handleSaveComment() {
+    if (!editingComment) return
+    await updateComment(editingComment.id, editingComment.content)
+    setComments((prev) => prev.map((c) =>
+      c.id === editingComment.id ? { ...c, content: editingComment.content } : c
+    ))
+    setEditingComment(null)
   }
 
   async function handleCreate() {
@@ -187,7 +255,14 @@ export default function ModerationSection() {
                     style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
                     onClick={() => handleOpenHistory(p)}
                   >
-                    Historique
+                    Activites
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', background: 'rgba(59,130,246,0.15)', color: '#93c5fd' }}
+                    onClick={() => handleOpenComments(p)}
+                  >
+                    Commentaires
                   </button>
                   {p.is_active ? (
                     <button className="btn-danger" disabled={deactivating === p.id} onClick={() => handleDeactivate(p.id)}>
@@ -247,11 +322,11 @@ export default function ModerationSection() {
         </div>
       )}
 
-      {/* ── Feeding history popup ─────────────────────────────────────────── */}
+      {/* ── Feeding events popup ──────────────────────────────────────────── */}
       {historyPing && (
-        <div className="modal-overlay" onClick={() => setHistoryPing(null)}>
-          <div className="modal-box" style={{ minWidth: '560px', maxWidth: '680px' }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: '0.25rem' }}>Historique — {historyPing.id.slice(0, 8)}...</h3>
+        <div className="modal-overlay" onClick={() => { setHistoryPing(null); setEditingEvent(null) }}>
+          <div className="modal-box" style={{ minWidth: '580px', maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginBottom: '0.25rem' }}>Activites — {historyPing.id.slice(0, 8)}...</h3>
             <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '1rem' }}>
               {historyPing.type}
               {historyPing.animal_type ? ` · ${historyPing.animal_type}` : ''}
@@ -274,28 +349,52 @@ export default function ModerationSection() {
                     padding: '0.75rem 1rem',
                     borderLeft: '3px solid #6366f1',
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <span style={{ fontWeight: 600, color: '#c4b5fd', fontSize: '0.85rem' }}>
-                          #{historyEvents.length - i}
-                        </span>
-                        <span className="text-muted" style={{ fontSize: '0.8rem', marginLeft: '0.5rem' }}>
-                          par {ev.fed_by.slice(0, 8)}...
-                        </span>
+                    {editingEvent?.id === ev.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.75rem', color: '#9ca3af', width: '6rem' }}>Note</label>
+                          <input className="inline-input" style={{ flex: 1 }}
+                            value={editingEvent.note}
+                            onChange={(e) => setEditingEvent({ ...editingEvent, note: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.75rem', color: '#9ca3af', width: '6rem' }}>Animaux vus</label>
+                          <input className="inline-input" style={{ width: '5rem' }} type="number" min="1" max="100"
+                            value={editingEvent.count}
+                            onChange={(e) => setEditingEvent({ ...editingEvent, count: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.3rem' }}>
+                          <button className="btn-submit" style={{ fontSize: '0.75rem', padding: '0.2rem 0.7rem' }} onClick={handleSaveEvent}>Sauver</button>
+                          <button className="btn-cancel" style={{ fontSize: '0.75rem', padding: '0.2rem 0.7rem' }} onClick={() => setEditingEvent(null)}>Annuler</button>
+                        </div>
                       </div>
-                      <span className="text-muted" style={{ fontSize: '0.8rem' }}>
-                        {formatDateTime(ev.fed_at)}
-                      </span>
-                    </div>
-                    {ev.animal_count_seen != null && (
-                      <p style={{ fontSize: '0.8rem', color: '#34d399', marginTop: '0.3rem' }}>
-                        {ev.animal_count_seen} animal(s) vu(s)
-                      </p>
-                    )}
-                    {ev.note && (
-                      <p style={{ fontSize: '0.85rem', color: '#e5e7eb', marginTop: '0.3rem', fontStyle: 'italic' }}>
-                        "{ev.note}"
-                      </p>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <span style={{ fontWeight: 600, color: '#c4b5fd', fontSize: '0.85rem' }}>#{historyEvents.length - i}</span>
+                            <span className="text-muted" style={{ fontSize: '0.8rem', marginLeft: '0.5rem' }}>par {ev.username}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                            <span className="text-muted" style={{ fontSize: '0.8rem' }}>{formatDateTime(ev.fed_at)}</span>
+                            <button className="btn-secondary" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}
+                              onClick={() => setEditingEvent({ id: ev.id, note: ev.note ?? '', count: ev.animal_count_seen != null ? String(ev.animal_count_seen) : '' })}>
+                              Editer
+                            </button>
+                            <button className="btn-danger" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}
+                              disabled={deletingEvent === ev.id}
+                              onClick={() => handleDeleteEvent(ev.id)}>
+                              {deletingEvent === ev.id ? '...' : 'Suppr.'}
+                            </button>
+                          </div>
+                        </div>
+                        {ev.animal_count_seen != null && (
+                          <p style={{ fontSize: '0.8rem', color: '#34d399', marginTop: '0.3rem' }}>{ev.animal_count_seen} animal(s) vu(s)</p>
+                        )}
+                        {ev.note && (
+                          <p style={{ fontSize: '0.85rem', color: '#e5e7eb', marginTop: '0.3rem', fontStyle: 'italic' }}>"{ev.note}"</p>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}
@@ -303,7 +402,80 @@ export default function ModerationSection() {
             )}
 
             <div className="modal-actions" style={{ marginTop: '1rem' }}>
-              <button className="btn-cancel" onClick={() => setHistoryPing(null)}>Fermer</button>
+              <button className="btn-cancel" onClick={() => { setHistoryPing(null); setEditingEvent(null) }}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Comments popup ────────────────────────────────────────────────── */}
+      {commentPing && (
+        <div className="modal-overlay" onClick={() => { setCommentPing(null); setEditingComment(null) }}>
+          <div className="modal-box" style={{ minWidth: '580px', maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginBottom: '0.25rem' }}>Commentaires — {commentPing.id.slice(0, 8)}...</h3>
+            <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '1rem' }}>
+              Cree le {commentPing.created_at.slice(0, 10)} · {comments.length} commentaire(s)
+            </p>
+
+            {commentsLoading ? (
+              <p className="text-muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>Chargement...</p>
+            ) : comments.length === 0 ? (
+              <p className="text-muted" style={{ textAlign: 'center', padding: '1.5rem 0' }}>Aucun commentaire pour ce ping.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '400px', overflowY: 'auto' }}>
+                {comments.map((c) => (
+                  <div key={c.id} style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1rem',
+                    borderLeft: '3px solid #3b82f6',
+                  }}>
+                    {editingComment?.id === c.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <textarea
+                          className="inline-input"
+                          style={{ resize: 'vertical', minHeight: '60px', fontFamily: 'inherit' }}
+                          maxLength={500}
+                          value={editingComment.content}
+                          onChange={(e) => setEditingComment({ ...editingComment, content: e.target.value })}
+                        />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn-submit" style={{ fontSize: '0.75rem', padding: '0.2rem 0.7rem' }} onClick={handleSaveComment}>Sauver</button>
+                          <button className="btn-cancel" style={{ fontSize: '0.75rem', padding: '0.2rem 0.7rem' }} onClick={() => setEditingComment(null)}>Annuler</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.35rem' }}>
+                          <div>
+                            <span style={{ fontWeight: 600, color: '#93c5fd', fontSize: '0.85rem' }}>{c.username}</span>
+                            <span className="text-muted" style={{ fontSize: '0.75rem', marginLeft: '0.5rem' }}>{formatDateTime(c.created_at)}</span>
+                            {c.updated_at !== c.created_at && (
+                              <span className="text-muted" style={{ fontSize: '0.7rem', marginLeft: '0.4rem' }}>(modifie)</span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <button className="btn-secondary" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}
+                              onClick={() => setEditingComment({ id: c.id, content: c.content })}>
+                              Editer
+                            </button>
+                            <button className="btn-danger" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}
+                              disabled={deletingComment === c.id}
+                              onClick={() => handleDeleteComment(c.id)}>
+                              {deletingComment === c.id ? '...' : 'Suppr.'}
+                            </button>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: '0.9rem', color: '#e5e7eb', margin: 0 }}>{c.content}</p>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="modal-actions" style={{ marginTop: '1rem' }}>
+              <button className="btn-cancel" onClick={() => { setCommentPing(null); setEditingComment(null) }}>Fermer</button>
             </div>
           </div>
         </div>
