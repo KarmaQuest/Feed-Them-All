@@ -32,6 +32,18 @@
 | 2026-06-13 | `GET /users/me/inventory` | ✅ 200 | Inventaire vide sur nouveau compte |
 | 2026-06-13 | `POST /shop/items/:id/purchase` (payant) | ✅ 200 | `client_secret` Stripe retourné (`pi_3Thk...`) |
 | 2026-06-13 | Stripe webhook `listen` | ✅ Connecté | `localhost:8080/shop/webhook` visible dans le dashboard Stripe |
+| 2026-06-13 | `GET /admin/users` (no JWT) | ✅ 401 | `RequireAdmin` bloque sans token |
+| 2026-06-13 | `GET /admin/users` (non-admin JWT) | ✅ 403 | `RequireAdmin` bloque le rôle `feeder` |
+| 2026-06-13 | `GET /admin/users` (admin JWT) | ✅ 200 | 5 utilisateurs retournés |
+| 2026-06-13 | `GET /admin/xp-actions` | ✅ 200 | 5 actions retournées |
+| 2026-06-13 | `GET /admin/level-thresholds` | ✅ 200 | 10 paliers retournés |
+| 2026-06-13 | `GET /admin/badges` | ✅ 200 | 10 badges retournés |
+| 2026-06-13 | `GET /admin/shop-items` | ✅ 200 | 9 items retournés |
+| 2026-06-13 | `GET /admin/pings` | ✅ 200 | 2 pings retournés avec report_count |
+| 2026-06-13 | `PATCH /admin/users/:id` (is_banned) | ✅ 204 | Bannissement appliqué |
+| 2026-06-13 | `PUT /admin/xp-actions/feed` | ✅ 204 | xp_value modifié |
+| 2026-06-13 | `POST /admin/badges` | ✅ 201 | Badge créé, UUID retourné |
+| 2026-06-13 | `DELETE /admin/badges/:id` | ✅ 204 | Badge supprimé |
 
 ---
 
@@ -124,29 +136,29 @@
 > Toutes les routes `/admin/*` sont protégées par le rôle `admin` (middleware dédié).
 > Aucune route publique ou Feeder n'est impactée.
 
-- [ ] **PA-01** Migration : table `level_thresholds` (level INT, min_xp INT) + colonne `users.is_banned BOOLEAN`
+- [x] **PA-01** Migration : table `level_thresholds` (level INT, min_xp INT) + colonne `users.is_banned BOOLEAN`
   - Initialisation avec les paliers actuels `[0,100,250,500,900,1400,2100,3000,4500,7000]`
   - `users.service.go` charge les paliers depuis la DB au démarrage (avec fallback hardcodé si table vide)
-- [ ] **PA-02** Package `admin/` — middleware `RequireAdmin` (vérifie `users.role = 'admin'`)
-- [ ] **PA-03** Dashboard utilisateurs
+- [x] **PA-02** Package `admin/` — middleware `RequireAdmin` (vérifie `users.role = 'admin'`)
+- [x] **PA-03** Dashboard utilisateurs
   - `GET /admin/users?page=&search=` — liste paginée avec filtre nom/email
   - `PATCH /admin/users/:id` — modifier role (`feeder`/`giver`/`association`/`admin`) ou `is_banned`
-- [ ] **PA-04** Dashboard XP & levels
+- [x] **PA-04** Dashboard XP & levels
   - `GET /admin/xp-actions` — liste toutes les actions avec xp_value + daily_limit
   - `PUT /admin/xp-actions/:action` — modifier xp_value ou daily_limit
   - `GET /admin/level-thresholds` — liste les paliers de level
   - `PUT /admin/level-thresholds` — remplacer tous les paliers (tableau JSON)
-- [ ] **PA-05** Dashboard badges
+- [x] **PA-05** Dashboard badges
   - `GET /admin/badges` — liste tous les badges
   - `POST /admin/badges` — créer un nouveau badge
   - `PUT /admin/badges/:id` — modifier label, description ou condition
   - `DELETE /admin/badges/:id` — supprimer un badge
-- [ ] **PA-06** Dashboard boutique skins
+- [x] **PA-06** Dashboard boutique skins
   - `GET /admin/shop-items` — liste tous les items avatar (skin/outfit/accessory)
   - `POST /admin/shop-items` — ajouter un nouvel item (slug, name, category, price_cents, unlock_condition)
   - `PUT /admin/shop-items/:id` — modifier un item existant
   - `DELETE /admin/shop-items/:id` — retirer un item de la boutique
-- [ ] **PA-07** Dashboard modération pings
+- [x] **PA-07** Dashboard modération pings
   - `GET /admin/pings?active=true&flagged=true` — liste des pings avec nombre de reports
   - `DELETE /admin/pings/:id` — désactivation forcée par un admin (sans vérification owner)
 - [ ] **PA-08** Frontend admin (`/admin`) — React, protégé par rôle
