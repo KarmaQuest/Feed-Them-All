@@ -31,6 +31,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/KarmaQuest/feed-them-all/internal/admin"
 	"github.com/KarmaQuest/feed-them-all/internal/auth"
 	"github.com/KarmaQuest/feed-them-all/internal/gamification"
 	"github.com/KarmaQuest/feed-them-all/internal/pings"
@@ -97,7 +98,15 @@ func main() {
 	// --- Wire up users ---
 	usersRepo := users.NewRepository(db)
 	usersSvc := users.NewService(usersRepo)
+	usersSvc.LoadThresholds(ctx) // load level thresholds from DB (fallback to hardcoded)
 	usersHandler := users.NewHandler(usersSvc)
+
+	// --- Wire up admin ---
+	adminRepo := admin.NewRepository(db)
+	adminSvc := admin.NewService(adminRepo)
+	adminSvc.SetThresholdReloader(usersSvc) // reload thresholds in memory after admin update
+	adminHandler := admin.NewHandler(adminSvc)
+	adminMW := admin.NewMiddleware(db)
 
 	// --- Wire up WebSocket handler ---
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -170,6 +179,40 @@ func main() {
 		r.Use(authSvc.Middleware)
 		r.Get("/users/me/inventory", shopHandler.GetInventory)
 		r.Post("/shop/items/{id}/purchase", shopHandler.Purchase)
+	})
+
+	// Admin routes (auth + admin role required)
+	r.Group(func(r chi.Router) {
+		r.Use(authSvc.Middleware)
+		r.Use(adminMW.RequireAdmin)
+
+		// Users
+		r.Get("/admin/users", adminHandler.ListUsers)
+		r.Patch("/admin/users/{id}", adminHandler.UpdateUser)
+
+		// XP Actions
+		r.Get("/admin/xp-actions", adminHandler.ListXPActions)
+		r.Put("/admin/xp-actions/{action}", adminHandler.UpdateXPAction)
+
+		// Level thresholds
+		r.Get("/admin/level-thresholds", adminHandler.ListLevelThresholds)
+		r.Put("/admin/level-thresholds", adminHandler.ReplaceAllThresholds)
+
+		// Badges
+		r.Get("/admin/badges", adminHandler.ListBadges)
+		r.Post("/admin/badges", adminHandler.CreateBadge)
+		r.Put("/admin/badges/{id}", adminHandler.UpdateBadge)
+		r.Delete("/admin/badges/{id}", adminHandler.DeleteBadge)
+
+		// Shop items
+		r.Get("/admin/shop-items", adminHandler.ListShopItems)
+		r.Post("/admin/shop-items", adminHandler.CreateShopItem)
+		r.Put("/admin/shop-items/{id}", adminHandler.UpdateShopItem)
+		r.Delete("/admin/shop-items/{id}", adminHandler.DeleteShopItem)
+
+		// Pings moderation
+		r.Get("/admin/pings", adminHandler.ListPingsAdmin)
+		r.Delete("/admin/pings/{id}", adminHandler.ForceDeactivatePing)
 	})
 
 	// Serve uploaded files

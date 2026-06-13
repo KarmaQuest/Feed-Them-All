@@ -119,3 +119,31 @@ func (r *Repository) GetLeaderboard(ctx context.Context) ([]LeaderboardEntry, er
 	}
 	return entries, nil
 }
+
+// GetLevelThresholds reads the XP thresholds from level_thresholds, sorted by level ASC.
+// Returns a slice where index 0 = level 1 min_xp, index 1 = level 2 min_xp, etc.
+const getLevelThresholdsQuery = `
+SELECT min_xp
+FROM level_thresholds
+ORDER BY level ASC`
+
+func (r *Repository) GetLevelThresholds(ctx context.Context) ([]int, error) {
+	rows, err := r.db.Query(ctx, getLevelThresholdsQuery)
+	if err != nil {
+		return nil, fmt.Errorf("users.GetLevelThresholds: %w", err)
+	}
+	defer rows.Close()
+
+	var thresholds []int
+	for rows.Next() {
+		var v int
+		if err := rows.Scan(&v); err != nil {
+			return nil, fmt.Errorf("users.GetLevelThresholds scan: %w", err)
+		}
+		thresholds = append(thresholds, v)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("users.GetLevelThresholds rows: %w", err)
+	}
+	return thresholds, nil
+}
