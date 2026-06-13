@@ -908,3 +908,581 @@ Elle reste active en arrière-plan et redirige tous les événements Stripe vers
 
 En production, Stripe enverra les webhooks directement à l'URL du serveur — la CLI n'est utile qu'en dev.
 
+---
+
+## Le Frontend React — `frontend-web/`
+
+### C'est quoi React ?
+
+React est une bibliothèque JavaScript créée par Meta (Facebook) pour construire des interfaces utilisateur.
+L'idée centrale : au lieu de manipuler directement la page HTML, tu décris **à quoi doit ressembler
+l'interface selon l'état des données**, et React se charge de mettre à jour la page automatiquement.
+
+> Analogie : plutôt que de dire "va chercher le bouton, change sa couleur, mets à jour ce texte...",
+> tu dis "si `isLogged = true`, affiche le bouton rouge avec ce texte". React s'occupe du reste.
+
+### TypeScript — JavaScript avec types
+
+TypeScript est JavaScript auquel on a ajouté des **types** : on précise ce qu'une variable contient.
+
+```ts
+// JavaScript (aucune indication)
+function ajouterXP(user, montant) { ... }
+
+// TypeScript (clair et vérifiable)
+function ajouterXP(user: User, montant: number): void { ... }
+```
+
+Avantage : l'éditeur de code détecte les erreurs **avant** d'exécuter le programme.
+Si tu passes un texte là où un nombre est attendu, VS Code te le signale immédiatement.
+
+### JSX — HTML dans le JavaScript
+
+React utilise une syntaxe spéciale appelée **JSX** qui permet d'écrire du HTML directement dans le code :
+
+```tsx
+// JSX (ce qu'on écrit)
+function Bouton({ texte }: { texte: string }) {
+  return <button className="btn-primary">{texte}</button>
+}
+
+// Ce que le navigateur reçoit après compilation
+React.createElement("button", { className: "btn-primary" }, texte)
+```
+
+Le fichier a l'extension `.tsx` (TypeScript + JSX) au lieu de `.ts`.
+
+### Composants — les briques de l'interface
+
+Un **composant** React est une fonction qui retourne du JSX.
+C'est comme un élément HTML personnalisé et réutilisable.
+
+```tsx
+// Composant PingMarker — une épingle sur la carte
+interface PingMarkerProps {
+  lat: number
+  lon: number
+  animalType: 'cat' | 'dog' | 'other'
+  count: number
+  onClick: () => void
+}
+
+function PingMarker({ lat, lon, animalType, count, onClick }: PingMarkerProps) {
+  return (
+    <Marker position={[lat, lon]} icon={getIcon(animalType)} eventHandlers={{ click: onClick }}>
+      <Popup>{count} {animalType}(s) ici</Popup>
+    </Marker>
+  )
+}
+```
+
+Les composants peuvent être imbriqués :
+```tsx
+<MapView>
+  <PingMarker ... />
+  <PingMarker ... />
+  <AvatarMarker ... />
+</MapView>
+```
+
+### Props — les paramètres d'un composant
+
+Les **props** (propriétés) sont les données qu'on passe à un composant, comme des paramètres de fonction.
+
+```tsx
+// Utilisation
+<PingMarker lat={48.856} lon={2.352} animalType="cat" count={3} onClick={handleClick} />
+
+// Dans le composant, on les reçoit comme paramètres
+function PingMarker({ lat, lon, animalType, count, onClick }: PingMarkerProps) {
+  // ...
+}
+```
+
+### Hooks — la mémoire et les effets des composants
+
+Les **hooks** sont des fonctions spéciales qui ajoutent des capacités aux composants.
+
+#### `useState` — mémoriser une valeur
+
+```tsx
+const [isOpen, setIsOpen] = useState(false)
+// isOpen = valeur actuelle
+// setIsOpen = fonction pour changer la valeur (déclenche un re-rendu)
+
+<button onClick={() => setIsOpen(true)}>Ouvrir</button>
+{isOpen && <Modal onClose={() => setIsOpen(false)} />}
+```
+
+Chaque fois que `setIsOpen` est appelé, React re-calcule l'affichage du composant.
+
+#### `useEffect` — déclencher du code au bon moment
+
+```tsx
+useEffect(() => {
+  // Ce code s'exécute après le premier affichage du composant
+  fetchPings().then(data => setPings(data))
+
+  return () => {
+    // Ce code s'exécute quand le composant disparaît (nettoyage)
+    closeWebSocket()
+  }
+}, []) // [] = ne s'exécute qu'une fois (au montage)
+```
+
+Cas d'usage dans FeedThemAll :
+- Charger les pings quand la carte s'affiche
+- Ouvrir la connexion WebSocket quand l'utilisateur se connecte
+- Démarrer la géolocalisation GPS au chargement
+
+#### `useCallback` — mémoriser une fonction
+
+```tsx
+// Sans useCallback : une nouvelle fonction est créée à chaque rendu → ralentit l'app
+const handleClick = (id: string) => { fetchPingDetails(id) }
+
+// Avec useCallback : la fonction est mémorisée, recréée seulement si fetchPingDetails change
+const handleClick = useCallback((id: string) => {
+  fetchPingDetails(id)
+}, [fetchPingDetails])
+```
+
+### Hooks personnalisés — réutiliser de la logique
+
+On peut créer ses propres hooks pour encapsuler de la logique réutilisable.
+
+```tsx
+// hooks/useGeolocation.ts
+function useGeolocation() {
+  const [position, setPosition] = useState<[number, number] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setError('Géolocalisation non supportée')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setPosition([pos.coords.latitude, pos.coords.longitude]),
+      () => setError('Accès refusé')
+    )
+  }, [])
+
+  return { position, error }
+}
+
+// Utilisation dans un composant
+function MapPage() {
+  const { position, error } = useGeolocation()
+  // position = [48.856, 2.352] ou null si en attente
+}
+```
+
+---
+
+## Zustand — la gestion d'état global
+
+### C'est quoi "l'état global" ?
+
+Dans React, chaque composant a son propre `useState` local.
+Mais parfois plusieurs composants éloignés dans l'arbre ont besoin de la même information.
+
+Exemple : quand l'utilisateur se connecte, le `Header` doit afficher son nom, la `MapPage` doit
+charger ses pings, et le `ProfileButton` doit s'activer. Ces 3 composants n'ont aucun lien direct.
+
+Plutôt que de "faire remonter l'état" jusqu'à un ancêtre commun (ce qui devient vite illisible),
+on utilise un **store global** — une source de vérité accessible depuis n'importe quel composant.
+
+**Zustand** est la bibliothèque de store global choisie pour FeedThemAll.
+Elle est légère (1 Ko), simple à utiliser, et compatible React.
+
+### Comment ça marche ?
+
+```ts
+// src/store/auth.ts
+import { create } from 'zustand'
+
+interface User { id: string; username: string; role: string }
+
+interface AuthStore {
+  user: User | null
+  isLogged: boolean
+  login: (user: User) => void   // action pour se connecter
+  logout: () => void            // action pour se déconnecter
+}
+
+export const useAuthStore = create<AuthStore>((set) => ({
+  user: null,
+  isLogged: false,
+  login: (user) => set({ user, isLogged: true }),   // set = modifier l'état
+  logout: () => set({ user: null, isLogged: false }),
+}))
+```
+
+### Utilisation dans les composants
+
+```tsx
+// Dans n'importe quel composant, n'importe où dans l'arbre
+function Header() {
+  const user = useAuthStore((s) => s.user)     // lire l'état
+  const logout = useAuthStore((s) => s.logout) // lire une action
+
+  return <div>{user?.username} <button onClick={logout}>Déconnexion</button></div>
+}
+
+function LoginPage() {
+  const login = useAuthStore((s) => s.login)
+
+  async function handleSubmit() {
+    const data = await apiLogin(email, password)
+    login(data.user)  // met à jour le store global → tous les composants se mettent à jour
+  }
+}
+```
+
+Le `(s) => s.user` est un **sélecteur** : il dit "abonne-moi uniquement aux changements de `user`".
+Si `isLogged` change mais pas `user`, le composant ne se re-rend pas — optimisation automatique.
+
+### Les stores de FeedThemAll
+
+| Store | Fichier | Contient |
+|---|---|---|
+| `useAuthStore` | `store/auth.ts` | user connecté, login/logout |
+| `useMapStore` | `store/map.ts` | liste des pings sur la carte, filtres actifs |
+| `useWebSocketStore` | `store/websocket.ts` | connexion WS, état connecté/déconnecté |
+
+### Zustand vs localStorage — où stocker les données ?
+
+| Données | Où les mettre | Pourquoi |
+|---|---|---|
+| Access token JWT | Zustand (mémoire) | Ne jamais le mettre dans localStorage (XSS) |
+| Refresh token | Cookie HttpOnly | Inaccessible à JavaScript |
+| Préférences UI | localStorage | Peut survivre au rechargement de page |
+| Liste des pings | Zustand | Temporaire, rechargée à chaque session |
+
+> **XSS (Cross-Site Scripting)** : une attaque où un script malveillant injecté dans la page
+> lit le localStorage et vole le token. Un cookie HttpOnly est inaccessible à JavaScript — même le script malveillant ne peut pas le lire.
+
+---
+
+## Axios — le client HTTP
+
+### C'est quoi Axios ?
+
+Axios est une bibliothèque JavaScript qui facilite les appels API HTTP.
+Dans FeedThemAll, **tous** les appels au backend passent par un client Axios configuré
+dans `src/api/client.ts`.
+
+### L'instance configurée
+
+```ts
+// src/api/client.ts
+const apiClient = axios.create({
+  baseURL: '/api',           // préfixe ajouté à toutes les URLs
+  withCredentials: true,     // envoie le cookie refresh token automatiquement
+})
+```
+
+Le proxy Vite transforme `/api/pings` → `http://localhost:8080/pings` pendant le développement.
+En production, c'est nginx ou le serveur qui fait ce travail.
+
+### L'intercepteur de refresh automatique
+
+Quand l'access token expire (après 15 min), le serveur répond `401 Unauthorized`.
+L'intercepteur Axios attrape ce `401` et tente automatiquement un refresh **sans que l'utilisateur
+ne s'en rende compte** :
+
+```
+[Composant]  →  GET /pings (access token expiré)
+                    │
+                    ▼
+              [Serveur]  →  401 Unauthorized
+                    │
+                    ▼
+         [Intercepteur Axios]
+              - POST /auth/refresh (cookie HttpOnly envoyé automatiquement)
+              - Nouveau access token reçu
+              - Rejoue GET /pings avec le nouveau token
+                    │
+                    ▼
+              [Composant]  →  reçoit les pings (l'utilisateur n'a rien vu)
+```
+
+Si le refresh échoue (token expiré depuis > 7 jours), l'intercepteur redirige vers `/login`.
+
+### La couche API (`src/api/`)
+
+Les appels réseau sont **toujours** dans des fichiers dédiés, jamais directement dans les composants.
+
+```ts
+// src/api/pings.ts
+export async function getPingsNearby(lat: number, lon: number, radius: number): Promise<Ping[]> {
+  const res = await apiClient.get(`/pings?lat=${lat}&lon=${lon}&radius=${radius}`)
+  return res.data
+}
+
+export async function createPing(data: CreatePingInput): Promise<Ping> {
+  const res = await apiClient.post('/pings', data)
+  return res.data
+}
+
+export async function addFeedingEvent(pingId: string, data: FeedingEventInput): Promise<void> {
+  await apiClient.post(`/pings/${pingId}/feedings`, data)
+}
+```
+
+> Avantage : si l'URL du serveur change, on ne modifie qu'un seul fichier.
+> Les composants ne savent pas comment les données arrivent — ils savent juste que `getPingsNearby(lat, lon, 500)` leur retourne une liste de pings.
+
+---
+
+## Leaflet & React-Leaflet — la carte interactive
+
+### C'est quoi Leaflet ?
+
+Leaflet est la bibliothèque JavaScript la plus populaire pour afficher des cartes interactives.
+Elle affiche une carte OpenStreetMap (tuiles libres et gratuites, contributeurs volontaires).
+
+**React-Leaflet** est un wrapper qui transforme les composants Leaflet en composants React.
+
+### Structure de base
+
+```tsx
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+
+function MapPage() {
+  return (
+    <MapContainer
+      center={[48.856, 2.352]}   // Paris par défaut
+      zoom={15}
+      style={{ height: '100vh', width: '100%' }}
+    >
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution="© OpenStreetMap contributors"
+      />
+
+      <Marker position={[48.856, 2.352]}>
+        <Popup>Un animal ici !</Popup>
+      </Marker>
+    </MapContainer>
+  )
+}
+```
+
+### Marqueurs personnalisés (pixel art)
+
+Leaflet permet de remplacer le marqueur par défaut par une image ou du HTML personnalisé.
+
+```tsx
+import L from 'leaflet'
+
+// Icône image simple (patte, gamelle...)
+const pawIcon = L.icon({
+  iconUrl: '/assets/sprites/markers/paw.png',
+  iconSize: [32, 32],      // taille en pixels
+  iconAnchor: [16, 32],    // point d'ancrage (bas-centre pour une épingle)
+  popupAnchor: [0, -32],   // où apparaît la popup par rapport à l'icône
+})
+
+// Icône HTML (sprite animé d'avatar)
+const avatarIcon = L.divIcon({
+  html: `<img src="/assets/sprites/characters/default.png"
+              style="image-rendering:pixelated;width:32px;height:48px" />`,
+  iconSize: [32, 48],
+  iconAnchor: [16, 48],
+  className: '',  // important : vide = pas de styles Leaflet par défaut
+})
+
+<Marker position={[lat, lon]} icon={pawIcon} />
+```
+
+### Réagir aux changements de vue (BoundingBox)
+
+Quand l'utilisateur fait défiler la carte, on veut envoyer la nouvelle zone visible au WebSocket.
+React-Leaflet expose un hook `useMapEvents` pour ça :
+
+```tsx
+function MapEventHandler() {
+  const map = useMapEvents({
+    moveend: () => {
+      const bounds = map.getBounds()
+      // Envoyer la nouvelle bounding box au WebSocket
+      wsSend({
+        type: 'subscribe_bbox',
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest(),
+      })
+    }
+  })
+  return null  // ce composant ne rend rien visuellement
+}
+```
+
+### Tuiles OpenStreetMap — gratuites mais respectueuses
+
+OpenStreetMap est une carte libre, construite par des bénévoles (comme Wikipedia pour les cartes).
+Ses tuiles sont gratuites mais il faut respecter leurs conditions :
+- Afficher l'attribution `© OpenStreetMap contributors`
+- Ne pas faire d'appels abusifs (cache les tuiles côté navigateur automatiquement)
+
+Pour un usage intensif en production, on peut passer sur **Mapbox** (tuiles payantes mais plus belles)
+ou **Stadia Maps** (gratuit jusqu'à 200k tuiles/mois).
+
+---
+
+## Les pings — type d'animal et nombre
+
+### Pourquoi ajouter le type d'animal et le nombre ?
+
+Un ping "animal vu ici" ne dit pas grand-chose. En ajoutant le type et le nombre :
+- Un bénévole sait **combien de nourriture apporter** (1 chat = 80g, 1 chienne + 5 chiots = bien plus)
+- La carte peut afficher des icônes différentes selon l'espèce (icône chat 🐱 vs chien 🐶)
+- Les statistiques globales deviennent plus riches ("3847 chats signalés cette année")
+
+### Ce qui a changé en base de données
+
+Migration `000008_ping_animal_fields` :
+
+```sql
+ALTER TABLE pings
+  ADD COLUMN animal_type VARCHAR(10) DEFAULT NULL,  -- 'cat', 'dog', 'other', NULL si type='food'
+  ADD COLUMN animal_count INTEGER DEFAULT 1;         -- nombre d'animaux observés
+```
+
+Contrainte : `animal_type` n'est rempli que si `type = 'animal'`.
+
+### Tableau des types supportés (V1)
+
+| Valeur | Icône | Description |
+|---|---|---|
+| `cat` | 🐱 | Chat errant ou de gouttière |
+| `dog` | 🐶 | Chien errant |
+| `other` | 🐾 | Autre animal (pigeon, lapin...) |
+
+D'autres types pourront être ajoutés en V2 sans modifier la structure.
+
+---
+
+## L'historique des nourrissages — Feeding Events
+
+### Pourquoi un historique ?
+
+Avant : `PATCH /pings/:id/fed` marquait le ping "nourri une fois" avec un timestamp unique.
+Problème : si le même animal est nourri lundi, mercredi et vendredi par trois personnes différentes,
+il n'y avait aucun moyen de le savoir.
+
+L'historique permet de :
+- Voir **qui a nourri**, **quand**, et **avec quelle photo**
+- Construire un lien affectif ("Moustache le chat roux a été nourri 47 fois ce mois")
+- Estimer la fréquence de nourrissage et alerter si un animal n'a pas été nourri depuis longtemps
+- Afficher une galerie photo chronologique dans la popup d'un ping
+
+### La nouvelle table `ping_feeding_events`
+
+```sql
+CREATE TABLE ping_feeding_events (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ping_id    UUID NOT NULL REFERENCES pings(id) ON DELETE CASCADE,
+  fed_by     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  fed_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  note       TEXT,                         -- note optionnelle ("elle avait faim !")
+  animal_count_seen INTEGER               -- combien d'animaux vus ce jour-là
+);
+```
+
+Les photos uploadées après un nourrissage sont liées à l'événement via `ping_media.feeding_event_id`.
+
+### Les nouvelles routes
+
+| Route | Méthode | Rôle |
+|---|---|---|
+| `POST /pings/:id/feedings` | Enregistrer un nourrissage (remplace `PATCH /pings/:id/fed`) |
+| `GET /pings/:id/feedings` | Récupérer l'historique complet des nourrissages |
+
+Le champ `pings.fed_at` reste présent — il est mis à jour automatiquement à chaque nourrissage
+pour indiquer **la date du dernier nourrissage** (utile pour filtrer les pings récemment nourris sur la carte).
+
+---
+
+## Vite — l'outil de build React
+
+### C'est quoi Vite ?
+
+Vite (prononcé "vit") est l'outil qui :
+1. **En développement** : démarre un serveur local ultra-rapide avec rechargement instantané (HMR — Hot Module Replacement). Chaque sauvegarde de fichier met à jour le navigateur en < 100ms.
+2. **En production** : compile et optimise tout le code en fichiers minifiés pour le serveur.
+
+### Le proxy Vite (développement uniquement)
+
+Dans `vite.config.ts`, on configure un proxy qui redirige `/api/*` vers le serveur Go :
+
+```
+Navigateur → /api/pings → Vite proxy → http://localhost:8080/pings → Go
+```
+
+Sans ce proxy, le navigateur bloquerait la requête (CORS — deux origines différentes).
+En production, c'est nginx qui joue ce rôle.
+
+### `.vite/` — dossier de cache
+
+Vite crée un dossier `.vite/` qui met en cache les dépendances pré-compilées (axios, leaflet...).
+Ce dossier est ignoré par git (`.gitignore`) car il est regénéré automatiquement.
+
+---
+
+## Démarrer le projet en local — commandes complètes
+
+### Backend Go (serveur API)
+
+```powershell
+# Ajouter Go au PATH si nécessaire
+$env:Path += ";C:\Program Files\Go\bin"
+
+# Dans le dossier backend
+cd backend
+$env:DATABASE_URL="postgres://fta:fta@localhost:5432/feedthemall?sslmode=disable"
+$env:JWT_SECRET="dev-secret-change-in-prod"
+$env:JWT_REFRESH_SECRET="dev-refresh-secret-change-in-prod"
+$env:ENV="development"
+$env:PORT="8080"
+go run ./cmd/api
+```
+
+### Frontend React (interface web)
+
+```bash
+cd frontend-web
+npm install   # première fois uniquement
+npm run dev   # démarre sur http://localhost:5173
+```
+
+### Base de données PostgreSQL
+
+```bash
+docker compose up -d   # démarre PostgreSQL en arrière-plan
+```
+
+### Dashboard admin
+
+Accessible sur `http://localhost:5173/login` avec `shoptest@test.com` / `Admin1234`.
+
+---
+
+## Tableau de bord des migrations SQL — état actuel
+
+| # | Fichier | Ce qu'il crée | Statut |
+|---|---|---|---|
+| 1 | `000001_init` | Tables initiales (users, pings, animal_profiles...) | ✅ |
+| 2 | `000002_refresh_tokens` | Tokens de reconnexion | ✅ |
+| 3 | `000003_ping_media` | Photos de pings | ✅ |
+| 4 | `000004_ping_reports` | Signalements | ✅ |
+| 5 | `000005_ping_report_votes` | Votes sur signalements | ✅ |
+| 6 | `000006_gamification` | XP, badges, leaderboard | ✅ |
+| 7 | `000007_avatar_shop` | Boutique avatars + inventaire | ✅ |
+| 8 | `000008_ping_animal_fields` | Type d'animal + nombre sur les pings | ✅ |
+| 9 | `000009_ping_feeding_events` | Historique des nourrissages | ✅ |
+

@@ -8,10 +8,17 @@
 //   GET  /pings?lat=&lon=&radius=&type=  → lister les pings proches (public)
 //   POST /pings                          → créer un ping (JWT requis)
 //   PATCH /pings/:id/confirm             → confirmer "l'animal est toujours là" (JWT requis)
-//   PATCH /pings/:id/fed                 → marquer un animal comme nourri (JWT requis)
+//   PATCH /pings/:id/fed                 → marquer un animal comme nourri — DEPRECATED, utiliser /feedings
 //   DELETE /pings/:id                    → désactiver un ping (JWT requis, propriétaire uniquement)
 //   POST /pings/:id/media                → uploader une photo de preuve (JWT requis)
 //   GET  /pings/:id/media                → lister les médias d'un ping (public)
+//
+//   POST /pings/:id/feedings             → enregistrer un nourrissage (JWT requis)
+//        Body JSON : { "note": "...", "animal_count_seen": 3 }
+//        Retourne : 201 Created + FeedingEvent
+//
+//   GET  /pings/:id/feedings             → historique des nourrissages (public)
+//        Retourne : 200 OK + tableau de FeedingEvent, ordre anti-chronologique
 //
 //   POST /pings/:id/report               → signaler un ping (JWT requis, tout utilisateur)
 //        Body JSON : { "reason": "wrong_location|animal_gone|duplicate|inappropriate", "comment": "..." }
@@ -341,4 +348,49 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 func writeError(w http.ResponseWriter, msg string, status int) {
 	writeJSON(w, status, map[string]string{"error": msg})
+}
+
+// AddFeedingEvent handles POST /pings/:id/feedings (JWT required).
+// Records that the calling user fed the animal(s) at this ping.
+// Optionally accepts a note and the number of animals seen.
+func (h *Handler) AddFeedingEvent(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	pingID := chi.URLParam(r, "id")
+
+	var req CreateFeedingEventRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	event, err := h.svc.AddFeedingEvent(r.Context(), pingID, userID, req)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, "ping not found", http.StatusNotFound)
+			return
+		}
+		slog.Error("AddFeedingEvent failed", "ping_id", pingID, "err", err)
+		writeError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusCreated, event)
+}
+
+// ListFeedingEvents handles GET /pings/:id/feedings (public).
+// Returns the full feeding history for a ping, most recent first.
+func (h *Handler) ListFeedingEvents(w http.ResponseWriter, r *http.Request) {
+	pingID := chi.URLParam(r, "id")
+
+	events, err := h.svc.ListFeedingEvents(r.Context(), pingID)
+	if err != nil {
+		slog.Error("ListFeedingEvents failed", "ping_id", pingID, "err", err)
+		writeError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, events)
 }

@@ -25,25 +25,28 @@ import (
 
 // fakeStore is an in-memory Store for unit tests only.
 type fakeStore struct {
-	mu         sync.Mutex
-	pings      map[string]Ping             // id -> Ping
-	media      map[string][]string         // pingID -> []filePath
-	reports    map[string]PingReport       // reportID -> PingReport
-	votes      map[string]map[string]string // reportID -> userID -> value
-	pingSeq    int
-	reportSeq  int
+	mu            sync.Mutex
+	pings         map[string]Ping              // id -> Ping
+	media         map[string][]string          // pingID -> []filePath
+	reports       map[string]PingReport        // reportID -> PingReport
+	votes         map[string]map[string]string // reportID -> userID -> value
+	feedingEvents map[string][]FeedingEvent    // pingID -> []FeedingEvent
+	pingSeq       int
+	reportSeq     int
+	feedingSeq    int
 }
 
 func newFakeStore() *fakeStore {
 	return &fakeStore{
-		pings:   make(map[string]Ping),
-		media:   make(map[string][]string),
-		reports: make(map[string]PingReport),
-		votes:   make(map[string]map[string]string),
+		pings:         make(map[string]Ping),
+		media:         make(map[string][]string),
+		reports:       make(map[string]PingReport),
+		votes:         make(map[string]map[string]string),
+		feedingEvents: make(map[string][]FeedingEvent),
 	}
 }
 
-func (f *fakeStore) Create(_ context.Context, userID, pingType string, lat, lon float64) (Ping, error) {
+func (f *fakeStore) Create(_ context.Context, userID, pingType string, lat, lon float64, animalType *string, animalCount int) (Ping, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -51,14 +54,16 @@ func (f *fakeStore) Create(_ context.Context, userID, pingType string, lat, lon 
 	id := fmt.Sprintf("ping-%d", f.pingSeq)
 	now := time.Now()
 	p := Ping{
-		ID:        id,
-		Type:      pingType,
-		Lat:       lat,
-		Lon:       lon,
-		CreatedBy: userID,
-		IsActive:  true,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:          id,
+		Type:        pingType,
+		Lat:         lat,
+		Lon:         lon,
+		CreatedBy:   userID,
+		IsActive:    true,
+		AnimalType:  animalType,
+		AnimalCount: animalCount,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 	f.pings[id] = p
 	return p, nil
@@ -226,4 +231,43 @@ func (f *fakeStore) VoteReport(_ context.Context, reportID, userID, value string
 	}
 	f.votes[reportID][userID] = value // upsert
 	return nil
+}
+
+func (f *fakeStore) AddFeedingEvent(_ context.Context, pingID, userID string, req CreateFeedingEventRequest) (FeedingEvent, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	p, ok := f.pings[pingID]
+	if !ok {
+		return FeedingEvent{}, ErrNotFound
+	}
+
+	// Update fed_at on ping
+	now := time.Now()
+	p.FedAt = &now
+	p.UpdatedAt = now
+	f.pings[pingID] = p
+
+	f.feedingSeq++
+	e := FeedingEvent{
+		ID:              fmt.Sprintf("feeding-%d", f.feedingSeq),
+		PingID:          pingID,
+		FedBy:           userID,
+		FedAt:           now,
+		Note:            req.Note,
+		AnimalCountSeen: req.AnimalCountSeen,
+	}
+	f.feedingEvents[pingID] = append(f.feedingEvents[pingID], e)
+	return e, nil
+}
+
+func (f *fakeStore) ListFeedingEvents(_ context.Context, pingID string) ([]FeedingEvent, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	events := f.feedingEvents[pingID]
+	// Return a copy to avoid races in tests
+	out := make([]FeedingEvent, len(events))
+	copy(out, events)
+	return out, nil
 }

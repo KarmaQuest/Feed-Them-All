@@ -247,22 +247,22 @@
 
 ### A — Architecture
 
-- [ ] **A1** — `frontend-web/.vite/deps/` mal ignoré par `.gitignore` (apparaît comme untracked)
-- [ ] **A2** — `references/design/sprites/` contient des binaires PNG/ZIP trackés dans git → **exclure du repo** (protection des sprites contre récupération externe)
-- [ ] **A3** — Dossier `shared/types/` absent → créer structure vide avec `index.ts` placeholder (types réels ajoutés en Phase 9)
-- [ ] **A4** — Pas de package `config/` centralisé dans le backend : les `os.Getenv()` sont éparpillés → créer `internal/config/config.go`
+- [x] **A1** — `frontend-web/.vite/deps/` mal ignoré par `.gitignore` (apparaissait comme untracked)
+- [x] **A2** — `references/design/sprites/` contient des binaires PNG/ZIP trackés dans git → **exclus du repo** (protection des sprites contre récupération externe)
+- [x] **A3** — Dossier `shared/types/` absent → créé avec `index.ts` placeholder (types réels ajoutés en Phase 9)
+- [x] **A4** — Pas de package `config/` centralisé → créé `internal/config/config.go`, `main.go` migré
 
 ### S — Sécurité
 
-- [ ] **S1** — CORS potentiellement en `*` → restreindre à `localhost:5173` (dev) et `https://feedthemall.org` (prod) (OWASP A05)
-- [ ] **S2** — WebSocket sans vérification `CheckOrigin` sur l'upgrader gorilla → ajouter validation de l'`Origin` header (OWASP A05)
-- [ ] **S3** — Vérifier que `STRIPE_SECRET_KEY` est lue via `os.Getenv` uniquement, jamais hardcodée (OWASP A02)
-- [ ] **S4** — Pas de validation de complexité mot de passe à l'inscription → minimum 8 chars + 1 chiffre (OWASP A07)
-- [ ] **S5** — Pagination sans cap serveur sur `GET /admin/users` → ajouter `LIMIT` max = 100 côté serveur (OWASP A04)
-- [ ] **S6** — Arrondi GPS (~100m) non implémenté → appliquer sur `GET /pings` ET `GET /admin/pings` (coordonnées stockées restent précises en DB) (OWASP A01)
-- [ ] **S7** — JWT secret `dev-secret-change-in-prod` doit déclencher une erreur fatale au démarrage si `ENV=production` (OWASP A02)
-- [ ] **S8** — Handler statique `uploads/` : vérifier qu'il utilise `http.StripPrefix` + `http.Dir` et non `filepath.Join` avec valeur user-controlled (OWASP A01 — Path Traversal)
-- [ ] **S9** — Cookie refresh token sans `SameSite=Strict` → ajouter l'attribut pour bloquer les requêtes cross-site (OWASP A01 — CSRF)
+- [x] **S1** — CORS restreint à `localhost:5173` + `https://feedthemall.org` (prod) (OWASP A05)
+- [x] **S2** — WebSocket `CheckOrigin` corrigé vers `feedthemall.org` (OWASP A05)
+- [x] **S3** — `STRIPE_SECRET_KEY` via `os.Getenv` uniquement — confirmé ok (OWASP A02)
+- [x] **S4** — Validation mot de passe renforcée : 8 chars + 1 chiffre obligatoire (OWASP A07)
+- [x] **S5** — Pagination capée à `page <= 100` côté serveur (OWASP A04)
+- [x] **S6** — Arrondi GPS 3 décimales (~100m) via `math.Round` sur `GET /pings` et `GET /admin/pings` (OWASP A01)
+- [x] **S7** — `config.Load()` refuse le démarrage en prod avec secrets insecures (OWASP A02)
+- [x] **S8** — Handler statique `uploads/` via `http.StripPrefix` + `http.Dir` — confirmé ok (OWASP A01)
+- [x] **S9** — Cookie refresh token avec `SameSite=Strict` — confirmé ok (OWASP A01)
 
 ---
 

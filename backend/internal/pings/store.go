@@ -24,7 +24,8 @@ import "context"
 // Store is the interface the Service depends on for all DB operations.
 type Store interface {
 	// Create inserts a new ping and returns the created Ping (with generated ID and timestamps).
-	Create(ctx context.Context, userID, pingType string, lat, lon float64) (Ping, error)
+	// animalType may be empty for food pings; animalCount defaults to 1.
+	Create(ctx context.Context, userID, pingType string, lat, lon float64, animalType *string, animalCount int) (Ping, error)
 
 	// ListNearby returns all active pings within the given radius (metres) of the given coordinates.
 	// Optionally filtered by type ("animal" or "food"). Returns at most 200 results.
@@ -67,4 +68,11 @@ type Store interface {
 	// VoteReport casts or updates a vote (up or down) on a report.
 	// Upsert behaviour: if the user already voted, the value is updated (up↔down).
 	VoteReport(ctx context.Context, reportID, userID, value string) error
+
+	// AddFeedingEvent records a new feeding action by a user on a ping.
+	// Also updates pings.fed_at to the current time.
+	AddFeedingEvent(ctx context.Context, pingID, userID string, req CreateFeedingEventRequest) (FeedingEvent, error)
+
+	// ListFeedingEvents returns all feeding events for a ping, ordered most recent first.
+	ListFeedingEvents(ctx context.Context, pingID string) ([]FeedingEvent, error)
 }

@@ -29,23 +29,44 @@ import "time"
 
 // Ping represents a single geolocated report as stored in the database.
 type Ping struct {
-	ID        string     `json:"id"`
-	Type      string     `json:"type"`       // "animal" or "food"
-	Lat       float64    `json:"lat"`        // latitude, extracted from GEOGRAPHY
-	Lon       float64    `json:"lon"`        // longitude, extracted from GEOGRAPHY
-	CreatedBy string     `json:"created_by"` // user UUID
-	IsActive  bool       `json:"is_active"`
-	FedAt     *time.Time `json:"fed_at,omitempty"` // nil until the animal is fed
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	ID          string     `json:"id"`
+	Type        string     `json:"type"`         // "animal" or "food"
+	Lat         float64    `json:"lat"`          // latitude, extracted from GEOGRAPHY
+	Lon         float64    `json:"lon"`          // longitude, extracted from GEOGRAPHY
+	CreatedBy   string     `json:"created_by"`   // user UUID
+	IsActive    bool       `json:"is_active"`
+	FedAt       *time.Time `json:"fed_at,omitempty"`  // last feeding time (kept in sync with feeding events)
+	AnimalType  *string    `json:"animal_type,omitempty"` // "cat", "dog", "other" — nil for food pings
+	AnimalCount int        `json:"animal_count"`  // number of animals observed (default 1)
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 // CreatePingRequest is the JSON body for POST /pings.
 // Both lat and lon are required. Type must be "animal" or "food".
+// AnimalType and AnimalCount are required when Type is "animal".
 type CreatePingRequest struct {
-	Type string  `json:"type"`
-	Lat  float64 `json:"lat"`
-	Lon  float64 `json:"lon"`
+	Type        string  `json:"type"`
+	Lat         float64 `json:"lat"`
+	Lon         float64 `json:"lon"`
+	AnimalType  *string `json:"animal_type,omitempty"`  // "cat", "dog", "other"
+	AnimalCount *int    `json:"animal_count,omitempty"` // defaults to 1 if omitted
+}
+
+// FeedingEvent represents a single feeding action recorded by a user.
+type FeedingEvent struct {
+	ID               string    `json:"id"`
+	PingID           string    `json:"ping_id"`
+	FedBy            string    `json:"fed_by"`  // user UUID
+	FedAt            time.Time `json:"fed_at"`
+	Note             *string   `json:"note,omitempty"`
+	AnimalCountSeen  *int      `json:"animal_count_seen,omitempty"`
+}
+
+// CreateFeedingEventRequest is the JSON body for POST /pings/:id/feedings.
+type CreateFeedingEventRequest struct {
+	Note            *string `json:"note,omitempty"`
+	AnimalCountSeen *int    `json:"animal_count_seen,omitempty"`
 }
 
 // NearbyQuery holds the parsed query parameters for GET /pings.

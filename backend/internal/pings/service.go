@@ -52,6 +52,9 @@ var (
 	// ErrInvalidType is returned when the ping type is not "animal" or "food".
 	ErrInvalidType = errors.New("type must be 'animal' or 'food'")
 
+	// ErrInvalidAnimalType is returned when animal_type is not one of the allowed values.
+	ErrInvalidAnimalType = errors.New("animal_type must be 'cat', 'dog', or 'other'")
+
 	// ErrInvalidCoords is returned when lat or lon are out of valid GPS range.
 	ErrInvalidCoords = errors.New("invalid coordinates: lat must be [-90,90], lon must be [-180,180]")
 
@@ -156,7 +159,25 @@ func (s *Service) Create(ctx context.Context, userID string, req CreatePingReque
 		return Ping{}, ErrInvalidCoords
 	}
 
-	ping, err := s.store.Create(ctx, userID, t, req.Lat, req.Lon)
+	// Validate animal_type when type is "animal"
+	var animalType *string
+	if t == "animal" {
+		if req.AnimalType != nil {
+			at := strings.ToLower(*req.AnimalType)
+			if at != "cat" && at != "dog" && at != "other" {
+				return Ping{}, ErrInvalidAnimalType
+			}
+			animalType = &at
+		}
+	}
+
+	// Default animal_count to 1 if not provided
+	animalCount := 1
+	if req.AnimalCount != nil && *req.AnimalCount >= 1 && *req.AnimalCount <= 100 {
+		animalCount = *req.AnimalCount
+	}
+
+	ping, err := s.store.Create(ctx, userID, t, req.Lat, req.Lon, animalType, animalCount)
 	if err != nil {
 		return Ping{}, fmt.Errorf("pings.Service.Create: %w", err)
 	}
@@ -326,6 +347,41 @@ func (s *Service) SaveMedia(ctx context.Context, pingID, userID string, data io.
 // GetMedia returns the list of media paths for a ping.
 func (s *Service) GetMedia(ctx context.Context, pingID string) ([]string, error) {
 	return s.store.ListMedia(ctx, pingID)
+}
+
+// AddFeedingEvent records that a user has fed the animals at this ping.
+// Updates pings.fed_at and inserts into ping_feeding_events atomically.
+// Awards XP for the "feed" action (fire-and-forget).
+func (s *Service) AddFeedingEvent(ctx context.Context, pingID, userID string, req CreateFeedingEventRequest) (FeedingEvent, error) {
+	event, err := s.store.AddFeedingEvent(ctx, pingID, userID, req)
+	if err != nil {
+		return FeedingEvent{}, fmt.Errorf("pings.Service.AddFeedingEvent: %w", err)
+	}
+
+	// Broadcast the ping update to WebSocket clients
+	if s.broadcaster != nil {
+		if p, err2 := s.store.GetByID(ctx, pingID); err2 == nil {
+			p.Lat = roundCoord(p.Lat)
+			p.Lon = roundCoord(p.Lon)
+			s.broadcaster.BroadcastPingUpdated(p)
+		}
+	}
+
+	// Award XP: feed (fire-and-forget)
+	s.tryAwardXP(userID, "feed")
+	return event, nil
+}
+
+// ListFeedingEvents returns the full feeding history for a ping, most recent first.
+func (s *Service) ListFeedingEvents(ctx context.Context, pingID string) ([]FeedingEvent, error) {
+	events, err := s.store.ListFeedingEvents(ctx, pingID)
+	if err != nil {
+		return nil, fmt.Errorf("pings.Service.ListFeedingEvents: %w", err)
+	}
+	if events == nil {
+		events = []FeedingEvent{}
+	}
+	return events, nil
 }
 
 // Report validates the reason enum and files a report for the given ping.

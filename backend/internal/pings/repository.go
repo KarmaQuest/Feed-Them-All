@@ -49,10 +49,11 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 // Create inserts a new ping and returns the full Ping struct with generated ID and timestamps.
 // lon/lat are stored as GEOGRAPHY(POINT, 4326) — note parameter order: ST_MakePoint(lon, lat).
-func (r *Repository) Create(ctx context.Context, userID, pingType string, lat, lon float64) (Ping, error) {
+// animalType is NULL for food pings; animalCount defaults to 1.
+func (r *Repository) Create(ctx context.Context, userID, pingType string, lat, lon float64, animalType *string, animalCount int) (Ping, error) {
 	const q = `
-		INSERT INTO pings (type, location, created_by)
-		VALUES ($1, ST_MakePoint($2, $3)::geography, $4)
+		INSERT INTO pings (type, location, created_by, animal_type, animal_count)
+		VALUES ($1, ST_MakePoint($2, $3)::geography, $4, $5, $6)
 		RETURNING
 			id,
 			type,
@@ -61,14 +62,16 @@ func (r *Repository) Create(ctx context.Context, userID, pingType string, lat, l
 			created_by,
 			is_active,
 			fed_at,
+			animal_type,
+			animal_count,
 			created_at,
 			updated_at
 	`
 	// $2 = lon (X axis), $3 = lat (Y axis) — PostGIS convention
 	var p Ping
-	err := r.db.QueryRow(ctx, q, pingType, lon, lat, userID).Scan(
+	err := r.db.QueryRow(ctx, q, pingType, lon, lat, userID, animalType, animalCount).Scan(
 		&p.ID, &p.Type, &p.Lat, &p.Lon, &p.CreatedBy,
-		&p.IsActive, &p.FedAt, &p.CreatedAt, &p.UpdatedAt,
+		&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		return Ping{}, fmt.Errorf("pings.Create: %w", err)
@@ -86,7 +89,7 @@ func (r *Repository) ListNearby(ctx context.Context, q NearbyQuery) ([]Ping, err
 			id, type,
 			ST_Y(location::geometry) AS lat,
 			ST_X(location::geometry) AS lon,
-			created_by, is_active, fed_at, created_at, updated_at
+			created_by, is_active, fed_at, animal_type, animal_count, created_at, updated_at
 		FROM pings
 		WHERE is_active = TRUE
 		  AND ST_DWithin(location, ST_MakePoint($1, $2)::geography, $3)
@@ -98,7 +101,7 @@ func (r *Repository) ListNearby(ctx context.Context, q NearbyQuery) ([]Ping, err
 			id, type,
 			ST_Y(location::geometry) AS lat,
 			ST_X(location::geometry) AS lon,
-			created_by, is_active, fed_at, created_at, updated_at
+			created_by, is_active, fed_at, animal_type, animal_count, created_at, updated_at
 		FROM pings
 		WHERE is_active = TRUE
 		  AND type = $4
@@ -134,7 +137,7 @@ func (r *Repository) ListNearby(ctx context.Context, q NearbyQuery) ([]Ping, err
 		var p Ping
 		if err := rows.Scan(
 			&p.ID, &p.Type, &p.Lat, &p.Lon, &p.CreatedBy,
-			&p.IsActive, &p.FedAt, &p.CreatedAt, &p.UpdatedAt,
+			&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("pings.ListNearby scan: %w", err)
 		}
@@ -154,13 +157,13 @@ func (r *Repository) GetByID(ctx context.Context, id string) (Ping, error) {
 			id, type,
 			ST_Y(location::geometry) AS lat,
 			ST_X(location::geometry) AS lon,
-			created_by, is_active, fed_at, created_at, updated_at
+			created_by, is_active, fed_at, animal_type, animal_count, created_at, updated_at
 		FROM pings WHERE id = $1
 	`
 	var p Ping
 	err := r.db.QueryRow(ctx, q, id).Scan(
 		&p.ID, &p.Type, &p.Lat, &p.Lon, &p.CreatedBy,
-		&p.IsActive, &p.FedAt, &p.CreatedAt, &p.UpdatedAt,
+		&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		return Ping{}, fmt.Errorf("pings.GetByID: %w", err)
@@ -335,6 +338,55 @@ func (r *Repository) VoteReport(ctx context.Context, reportID, userID, value str
 		return fmt.Errorf("pings.VoteReport: %w", err)
 	}
 	return nil
+}
+
+// AddFeedingEvent records a feeding action and updates pings.fed_at in a single transaction.
+// The CTE pattern ensures both writes are atomic: if either fails, both are rolled back.
+func (r *Repository) AddFeedingEvent(ctx context.Context, pingID, userID string, req CreateFeedingEventRequest) (FeedingEvent, error) {
+	const q = `
+		WITH ev AS (
+			INSERT INTO ping_feeding_events (ping_id, fed_by, note, animal_count_seen)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id, ping_id, fed_by, fed_at, note, animal_count_seen
+		), upd AS (
+			UPDATE pings SET fed_at = NOW(), updated_at = NOW()
+			WHERE id = $1 AND is_active = TRUE
+		)
+		SELECT id, ping_id, fed_by, fed_at, note, animal_count_seen FROM ev
+	`
+	var e FeedingEvent
+	err := r.db.QueryRow(ctx, q, pingID, userID, req.Note, req.AnimalCountSeen).Scan(
+		&e.ID, &e.PingID, &e.FedBy, &e.FedAt, &e.Note, &e.AnimalCountSeen,
+	)
+	if err != nil {
+		return FeedingEvent{}, fmt.Errorf("pings.AddFeedingEvent: %w", err)
+	}
+	return e, nil
+}
+
+// ListFeedingEvents returns all feeding events for a ping, most recent first.
+func (r *Repository) ListFeedingEvents(ctx context.Context, pingID string) ([]FeedingEvent, error) {
+	const q = `
+		SELECT id, ping_id, fed_by, fed_at, note, animal_count_seen
+		FROM ping_feeding_events
+		WHERE ping_id = $1
+		ORDER BY fed_at DESC
+	`
+	rows, err := r.db.Query(ctx, q, pingID)
+	if err != nil {
+		return nil, fmt.Errorf("pings.ListFeedingEvents: %w", err)
+	}
+	defer rows.Close()
+
+	var events []FeedingEvent
+	for rows.Next() {
+		var e FeedingEvent
+		if err := rows.Scan(&e.ID, &e.PingID, &e.FedBy, &e.FedAt, &e.Note, &e.AnimalCountSeen); err != nil {
+			return nil, fmt.Errorf("pings.ListFeedingEvents scan: %w", err)
+		}
+		events = append(events, e)
+	}
+	return events, rows.Err()
 }
 
 // roundCoord rounds a GPS coordinate to 4 decimal places (~11 m precision).

@@ -144,9 +144,11 @@ func main() {
 		// Pings mutations
 		r.Post("/pings", pingsHandler.Create)
 		r.Patch("/pings/{id}/confirm", pingsHandler.Confirm)
-		r.Patch("/pings/{id}/fed", pingsHandler.MarkFed)
+		r.Patch("/pings/{id}/fed", pingsHandler.MarkFed) // kept for backward compat
 		r.Delete("/pings/{id}", pingsHandler.Deactivate)
 		r.Post("/pings/{id}/media", pingsHandler.UploadMedia)
+		// Feeding history (new — preferred over PATCH /fed)
+		r.Post("/pings/{id}/feedings", pingsHandler.AddFeedingEvent)
 		// Reports (any authenticated user, including ping creator)
 		r.Post("/pings/{id}/report", pingsHandler.Report)
 		r.Post("/pings/{id}/reports/{reportID}/vote", pingsHandler.VoteReport)
@@ -154,6 +156,7 @@ func main() {
 	// Public read routes
 	r.Get("/pings/{id}/media", pingsHandler.ListMedia)
 	r.Get("/pings/{id}/reports", pingsHandler.ListReports)
+	r.Get("/pings/{id}/feedings", pingsHandler.ListFeedingEvents)
 	// WebSocket endpoint (optional JWT via ?token=<JWT>)
 	r.Get("/ws", wsHandler.ServeWS)
 
