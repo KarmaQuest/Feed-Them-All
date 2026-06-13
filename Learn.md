@@ -249,14 +249,16 @@ Disponible uniquement quand `ENV=development`.
 
 ## Ce qui vient ensuite
 
-| Phase | Ce qui sera créé |
-|---|---|
-| P3 — WebSocket | Mise à jour de la carte en temps réel |
-| P4 — Gamification | Système XP, badges, leaderboard |
-| P5/6 — Frontend Web | Interface React avec la carte Leaflet |
-| P7 — Avatars | Sprites pixel art des personnages |
-| P8 — Design | Assets Aseprite / PixelLab.ai |
-| P9 — Mobile | Application React Native |
+| Phase | Ce qui sera créé | Statut |
+|---|---|---|
+| P3 — WebSocket | Mise à jour de la carte en temps réel | ✅ Terminé |
+| P4 — Gamification | Système XP, badges, leaderboard | ✅ Terminé |
+| P4-08 — Shop | Boutique avatars, Stripe, inventaire | ✅ Terminé |
+| PA — Admin Dashboard | Interface d'administration backend + frontend | ⬜ À faire |
+| P5/6 — Frontend Web | Interface React avec la carte Leaflet | ⬜ À faire |
+| P7 — Avatars | Sprites pixel art des personnages | ⬜ À faire |
+| P8 — Design | Assets Aseprite / PixelLab.ai | ⬜ À faire |
+| P9 — Mobile | Application React Native | ⬜ À faire |
 
 ---
 
@@ -338,6 +340,8 @@ Pour FeedThemAll, il faut donc un **serveur qui tourne en permanence**.
 | **Fly.io** | ~5-10€/mois | Facile | ✅ | ✅ | ⚠️ disparaissent au redéploiement |
 | **Railway** | ~5€/mois | Très facile | ✅ | ⚠️ non garanti | ⚠️ disparaissent |
 | **Render** | ~7€/mois | Facile | ✅ | ✅ | ⚠️ disparaissent |
+
+Voir aussi : https://www.hetzner.com/cloud/cost-optimized
 
 **"Photos disparaissent"** : sur les hébergements cloud modernes, chaque mise à jour du serveur repart d'une image vierge. Les photos uploadées par les utilisateurs sont effacées. Solution : les stocker sur un service externe comme **Cloudflare R2** ou **AWS S3** qui garde les fichiers séparément du serveur.
 
@@ -504,3 +508,403 @@ Pour les votes : au lieu de bloquer avec une erreur si l'utilisateur a déjà vo
 on **remplace son vote** par le nouveau. SQL : `INSERT ... ON CONFLICT DO UPDATE SET value = EXCLUDED.value`.
 
 C'est le comportement de YouTube (tu peux changer ton pouce en bas) ou Reddit.
+
+---
+
+## Le package `websocket` — `backend/internal/websocket/`
+
+### Le Hub — chef d'orchestre des connexions
+
+Le **Hub** est un objet unique qui tourne dans une goroutine dédiée et gère **tous** les clients connectés.
+Il est le seul à modifier la liste des clients — cela évite les conflits si deux utilisateurs
+se connectent exactement en même temps (**race condition**).
+
+```
+[Client A connecté]  →  register channel  →  [HUB]  →  [liste des clients]
+[Client B déconnecté] →  unregister channel →  [HUB]  →  [liste mise à jour]
+[Nouveau ping créé]   →  broadcast channel  →  [HUB]  →  envoie à tous les clients concernés
+```
+
+> Analogie : le Hub est comme un standardiste téléphonique. Tout passe par lui.
+> Personne n'appelle directement quelqu'un d'autre — on demande au standardiste de transmettre.
+
+### BoundingBox — recevoir seulement ce qui est sur ton écran
+
+Quand une application affiche une carte, elle n'a pas besoin de recevoir les pings du monde entier —
+seulement ceux visibles dans la **zone de la carte affichée sur l'écran**.
+
+Une `BoundingBox` est un rectangle GPS : `{ nord, sud, est, ouest }`.
+
+```
+┌─────────────────────────────────┐  ← nord (ex: 48.90)
+│                                 │
+│   Tu vois la carte ici          │
+│   Le serveur n'envoie que ce    │
+│   qui est dans ce rectangle     │
+│                                 │
+└─────────────────────────────────┘  ← sud (ex: 48.80)
+  ouest (ex: 2.28)        est (ex: 2.42)
+```
+
+Quand tu fais défiler la carte vers le nord, ton client envoie une nouvelle BoundingBox au serveur.
+
+### Goroutine de lecture / écriture par client
+
+Chaque client WebSocket a **deux goroutines** qui tournent en parallèle :
+
+| Goroutine | Rôle |
+|---|---|
+| `ReadPump` | Lit les messages entrants du client (position GPS, changement de zone) |
+| `WritePump` | Envoie les messages sortants vers le client (nouveaux pings, positions) |
+
+Séparer lecture et écriture en deux goroutines est la méthode recommandée par gorilla/websocket :
+les deux peuvent agir en même temps sans se bloquer.
+
+### Keepalive — ping/pong
+
+Si une connexion WebSocket est inerte trop longtemps (WiFi coupé, onglet en arrière-plan),
+le serveur ne peut pas toujours détecter que l'autre côté est parti.
+
+Le mécanisme **ping/pong** résout ça :
+- Toutes les 54 secondes, le serveur envoie un message "ping" au client
+- Si le client ne répond pas avec "pong" dans les 60 secondes → connexion fermée et client retiré
+
+### Rate limiting GPS — 1 mise à jour par seconde
+
+Si chaque feeder envoie sa position GPS 60 fois par seconde (mise à jour accélération du téléphone),
+1000 feeders = 60 000 messages/seconde. C'est trop.
+
+On utilise un **token bucket** (seau de jetons) pour limiter à 1 message GPS par seconde par client :
+- Le seau se remplit de 1 jeton par seconde
+- Chaque message GPS consomme 1 jeton
+- Si le seau est vide → le message est ignoré silencieusement
+
+> Analogie : tu as un robinet qui te donne 1 bille par seconde. Chaque fois que tu veux envoyer
+> ta position, tu utilises 1 bille. Si tu n'en as plus, tu attends la prochaine bille.
+
+### Précision GPS arrondie
+
+Les coordonnées GPS envoyées par les clients sont arrondies à **4 décimales** (~11 mètres de précision).
+Raison : éviter un déluge de mises à jour quand le téléphone oscille de 0.00001° sans bouger.
+
+---
+
+## Le package `gamification` — `backend/internal/gamification/`
+
+### C'est quoi le système XP ?
+
+L'XP (expérience) est un compteur qui augmente quand tu fais des actions utiles dans l'app.
+Chaque type d'action a un nombre de points et une limite journalière.
+
+| Action | Identifiant | XP | Limite/jour |
+|---|---|---|---|
+| Signaler un animal | `signal_animal` | 10 | 5× |
+| Confirmer une présence | `confirm_presence` | 15 | 10× |
+| Nourrir un animal | `feed` | 25 | 5× |
+| Uploader une photo | `upload_photo` | 20 | 3× |
+
+Ces valeurs sont configurées dans la **table `xp_actions`** en base de données — pas dans le code.
+Un admin peut les modifier sans redéployer le serveur.
+
+### LogAndAwardXP — opération atomique avec CTE
+
+Quand un utilisateur gagne des XP, deux choses doivent se passer ensemble :
+1. Enregistrer l'action dans `xp_log` (historique)
+2. Incrémenter `users.xp`
+
+On utilise une **CTE (Common Table Expression)** pour faire les deux en une seule requête SQL :
+
+```sql
+WITH inserted AS (
+    INSERT INTO xp_log (user_id, action, xp_earned) VALUES ($1, $2, $3)
+    RETURNING xp_earned
+)
+UPDATE users SET xp = xp + (SELECT xp_earned FROM inserted) WHERE id = $1
+```
+
+> Pourquoi une CTE ? Si on faisait deux requêtes séparées et que le serveur crashait entre les deux,
+> l'utilisateur aurait son log mais pas ses XP (ou l'inverse). La CTE garantit le "tout ou rien".
+
+### Les badges — conditions configurables en base
+
+Un badge est défini par :
+- Son identifiant (`first_signal`, `feeder_5`...)
+- Son nom affiché ("Premier signal", "Nourrisseur débutant"...)
+- Une **condition** en JSON : `{"type": "action_count", "action": "feed", "threshold": 5}`
+
+Types de conditions :
+- `xp_threshold` → "avoir accumulé X points XP total"
+- `action_count` → "avoir effectué X fois une action précise"
+
+Avantage : ajouter un badge = insérer une ligne en base, sans modifier le code.
+
+### Vérification asynchrone des badges
+
+Vérifier si un utilisateur vient de débloquer un badge après chaque action serait lent
+si fait de façon synchrone (l'utilisateur attend la réponse).
+
+Solution : la vérification se lance dans une **goroutine séparée** (fil d'exécution parallèle) :
+
+```
+POST /pings/:id/fed
+    │
+    ▼
+Service.MarkFed() → base de données mise à jour → réponse 204 envoyée immédiatement
+    │
+    └──► (goroutine) AwardXP() → CheckBadges() → CheckQuestItems()
+              [s'exécute en arrière-plan, sans bloquer le client]
+```
+
+L'utilisateur reçoit sa réponse instantanément. Les badges apparaissent quelques millisecondes plus tard.
+
+### Le leaderboard — cache en mémoire
+
+Le classement global des 20 meilleurs feeders est **calculé en mémoire et mis en cache** pour 5 minutes.
+
+Pourquoi ? Si 1000 utilisateurs regardent le leaderboard en même temps, on ne veut pas faire
+1000 requêtes SQL identiques. On fait la requête une fois, on garde le résultat 5 minutes.
+
+```
+Requête 1 : calcul SQL → résultat stocké en mémoire avec timestamp
+Requêtes 2 à 10000 : résultat servi depuis la mémoire (instantané)
+[5 minutes plus tard] Requête 10001 : nouveau calcul SQL → nouveau cache
+```
+
+Le cache utilise `sync.RWMutex` : plusieurs goroutines peuvent lire simultanément,
+mais une seule peut écrire (pendant le rafraîchissement). Cela évite les corruptions.
+
+### Calcul du niveau
+
+Le niveau est calculé à la volée à partir des XP — il n'est **pas stocké en base**.
+Si les seuils changent (décision de game design), tous les utilisateurs voient leur niveau mis à jour
+automatiquement sans migration de données.
+
+| Niveau | XP requis |
+|---|---|
+| 1 | 0 |
+| 2 | 100 |
+| 3 | 250 |
+| 4 | 500 |
+| 5 | 900 |
+| 6 | 1 400 |
+| 7 | 2 100 |
+| 8 | 3 000 |
+| 9 | 4 500 |
+| 10 | 7 000 |
+
+---
+
+## Le package `shop` — `backend/internal/shop/`
+
+### Les 3 types d'items
+
+| Type | Comment le débloquer | Exemple |
+|---|---|---|
+| **Default** | Disponible dès le départ, sans condition | Skin de base, tenue par défaut |
+| **Quest** | Remplir une condition (XP ou actions) | "Tenue Feeder" après 5 nourrissages |
+| **Paid** | Payer via Stripe | "Ninja Outfit" 6,99$ |
+
+### Le flux d'achat Stripe
+
+Quand un utilisateur achète un item payant, voici ce qui se passe :
+
+```
+[Utilisateur clique "Acheter"]
+        │
+        ▼
+POST /shop/items/:id/purchase
+        │
+        ▼
+Backend crée un PaymentIntent chez Stripe
+        │
+        ▼
+Retourne un client_secret au frontend
+        │
+        ▼
+Frontend affiche le formulaire de carte Stripe (stripe.js)
+        │
+        ▼
+Utilisateur entre sa carte → Stripe traite le paiement
+        │
+        ▼
+Stripe envoie un webhook POST /shop/webhook → "payment_intent.succeeded"
+        │
+        ▼
+Backend vérifie la signature du webhook (STRIPE_WEBHOOK_SECRET)
+        │
+        ▼
+CompleteOrder : UPDATE shop_orders + INSERT user_avatar_items (atomique via CTE)
+        │
+        ▼
+L'item apparaît dans l'inventaire de l'utilisateur
+```
+
+### C'est quoi un webhook ?
+
+Un webhook est une notification que Stripe envoie **au serveur** quand un événement se produit.
+C'est l'inverse d'un appel API normal : ici c'est Stripe qui appelle notre serveur, pas l'inverse.
+
+> Analogie : au lieu d'appeler le restaurant toutes les 5 minutes pour demander "ma pizza est prête ?",
+> le restaurant t'appelle quand elle est prête. C'est un webhook.
+
+**Pourquoi ne pas faire confiance au frontend ?**
+Si le frontend disait au serveur "le paiement a réussi, donne-moi l'item", n'importe qui pourrait
+envoyer ce message sans avoir vraiment payé. Le webhook vient **directement de Stripe**, avec une
+signature cryptographique que le serveur vérifie — impossible à falsifier.
+
+### Vérification de signature webhook
+
+Stripe joint à chaque webhook une valeur `Stripe-Signature` dans les headers.
+Le backend la vérifie avec `STRIPE_WEBHOOK_SECRET` (une clé partagée secrète).
+
+Si la signature ne correspond pas → requête rejetée immédiatement avec 400.
+Cela protège contre quelqu'un qui essaierait de simuler un faux paiement.
+
+### Idempotence — éviter de doubler les items
+
+Si Stripe envoie le même webhook deux fois (réseau instable, retry automatique),
+le serveur ne doit pas créditer l'item deux fois.
+
+Protection : la table `shop_orders` a une contrainte `UNIQUE` sur `stripe_payment_intent_id`.
+Si `CompleteOrder` est appelé deux fois avec le même ID Stripe → la deuxième tentative retourne
+`ErrOrderExists` et l'action est ignorée silencieusement.
+
+> Idempotence = une opération qui donne le même résultat peu importe combien de fois on la répète.
+
+---
+
+## Injection de dépendances via interfaces — éviter les imports circulaires
+
+### Le problème
+
+Le package `pings` doit envoyer des XP au package `gamification`.
+Le package `gamification` doit accorder des items au package `shop`.
+
+Si `pings` importait directement `gamification`, et `gamification` importait directement `shop`,
+tout fonctionnerait. Mais si un jour `shop` avait besoin d'un ping, on aurait :
+`pings → gamification → shop → pings` = **import circulaire** = Go refuse de compiler.
+
+### La solution : interfaces dans le paquet consommateur
+
+Au lieu d'importer le package cible, on définit une **interface minimale** dans le package qui en a besoin.
+
+```
+pings/service.go définit :
+    type Broadcaster interface { BroadcastPingCreated(ping) }
+    type XPAwarder interface { AwardXP(ctx, userID, action) }
+
+gamification/service.go définit :
+    type ItemGranter interface { CheckQuestItems(ctx, userID) }
+```
+
+Puis dans `main.go` on "branche" les vraies implémentations :
+
+```go
+pingsService.SetBroadcaster(wsHub)         // wsHub implémente Broadcaster
+pingsService.SetXPAwarder(gamifService)    // gamifService implémente XPAwarder
+gamifService.SetItemGranter(shopService)   // shopService implémente ItemGranter
+```
+
+Résultat : les packages ne se connaissent pas entre eux — ils connaissent seulement des interfaces.
+C'est `main.go` qui fait les connexions. Zéro import circulaire.
+
+> Analogie : une prise électrique (interface) ne "sait" pas ce qui sera branché dessus.
+> Une lampe, un chargeur, un aspirateur — tous peuvent s'y brancher tant qu'ils ont la bonne fiche.
+
+---
+
+## Les goroutines et la concurrence Go
+
+### C'est quoi une goroutine ?
+
+Une goroutine est un **fil d'exécution léger** géré par Go.
+Tu peux en lancer des milliers sans problème (elles consomment ~2 Ko chacune, contre ~1 Mo pour un thread OS).
+
+```go
+go maFonction()  // Lance maFonction() en parallèle — le code continue sans attendre
+```
+
+Dans FeedThemAll, les goroutines servent à :
+- Gérer chaque client WebSocket (2 goroutines par client : ReadPump + WritePump)
+- Vérifier les badges après chaque action (sans bloquer la réponse HTTP)
+- Maintenir le Hub WebSocket dans son propre fil d'exécution
+
+### Les channels — communication entre goroutines
+
+Les goroutines communiquent via des **channels** (tuyaux typés).
+Envoyer dans un channel bloque jusqu'à ce que quelqu'un lise de l'autre côté.
+
+```
+goroutine A ──── channel ────► goroutine B
+              "nouveau ping"
+```
+
+Dans le Hub WebSocket :
+```go
+hub.broadcast ← message  // "envoie ce message à tous les clients"
+hub.register  ← client   // "enregistre ce nouveau client"
+hub.unregister ← client  // "retire ce client"
+```
+
+### Mutex — protéger les données partagées
+
+Si deux goroutines modifient la même variable en même temps, le résultat est imprévisible (**race condition**).
+
+Un **mutex** (mutual exclusion) permet à une seule goroutine d'accéder à une ressource à la fois :
+
+```go
+mu.Lock()        // "je prends le verrou"
+données = ...    // modification sécurisée
+mu.Unlock()      // "je libère le verrou"
+```
+
+`sync.RWMutex` est une variante : plusieurs goroutines peuvent **lire** simultanément,
+mais une seule peut **écrire**. Utilisé pour le cache du leaderboard.
+
+---
+
+## Migrations SQL — tableau complet
+
+| Fichier | Ce qu'il crée |
+|---|---|
+| `000001_init.up.sql` | Tables initiales : users, pings, animal_profiles, badges, user_badges, xp_actions, subscriptions |
+| `000002_refresh_tokens.up.sql` | Table `refresh_tokens` (connexion persistante) |
+| `000003_ping_media.up.sql` | Table `ping_media` (photos uploadées) |
+| `000004_ping_reports.up.sql` | Table `ping_reports` (signalements) |
+| `000005_ping_report_votes.up.sql` | Table `ping_report_votes` (votes up/down) |
+| `000006_gamification.up.sql` | Table `xp_log` (historique XP), seeds xp_actions + 10 badges |
+| `000007_avatar_shop.up.sql` | Tables `avatar_items`, `user_avatar_items`, `shop_orders` + 9 items seedés |
+
+---
+
+## Variables d'environnement nécessaires au démarrage du serveur
+
+```
+DATABASE_URL        = postgres://fta:fta@localhost:5432/feedthemall?sslmode=disable
+JWT_SECRET          = (clé secrète pour signer les access tokens)
+JWT_REFRESH_SECRET  = (clé secrète pour signer les refresh tokens)
+ENV                 = development
+PORT                = 8080
+STRIPE_SECRET_KEY   = sk_test_...   (clé Stripe — ne jamais committer)
+STRIPE_WEBHOOK_SECRET = whsec_...   (clé Stripe webhook — ne jamais committer)
+```
+
+> Ces valeurs ne sont **jamais** écrites dans le code source.
+> Sur un vrai serveur, elles seront dans des variables système ou un gestionnaire de secrets.
+
+---
+
+## Stripe CLI — outil de développement local
+
+Stripe ne peut pas envoyer des webhooks vers `localhost` (ton ordinateur n'est pas accessible depuis Internet).
+La **Stripe CLI** crée un tunnel pour recevoir ces webhooks localement :
+
+```bash
+stripe listen --forward-to localhost:8080/shop/webhook
+```
+
+Cette commande affiche un `whsec_...` temporaire à utiliser comme `STRIPE_WEBHOOK_SECRET`.
+Elle reste active en arrière-plan et redirige tous les événements Stripe vers ton serveur local.
+
+En production, Stripe enverra les webhooks directement à l'URL du serveur — la CLI n'est utile qu'en dev.
+
