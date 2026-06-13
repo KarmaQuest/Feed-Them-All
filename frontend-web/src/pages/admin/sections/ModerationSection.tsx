@@ -9,17 +9,17 @@
 //   Signales seulement : pings dont report_count > 0
 import { useState, useEffect, useCallback } from 'react'
 import { listPingsAdmin, forceDeactivatePing, createPingAdmin, type AdminPing } from '../../../api/admin'
-
-const EMPTY_PING = { user_id: '', type: 'animal', lat: '', lon: '' }
+import { useAuthStore } from '../../../store/auth'
 
 export default function ModerationSection() {
+  const currentUser = useAuthStore((s) => s.user)
   const [pings, setPings] = useState<AdminPing[]>([])
   const [loading, setLoading] = useState(false)
   const [activeOnly, setActiveOnly] = useState(true)
   const [flaggedOnly, setFlaggedOnly] = useState(false)
   const [deactivating, setDeactivating] = useState<string | null>(null)
   const [modal, setModal] = useState(false)
-  const [newPing, setNewPing] = useState({ ...EMPTY_PING })
+  const [newPing, setNewPing] = useState({ user_id: '', type: 'animal', lat: '', lon: '' })
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
 
@@ -55,7 +55,7 @@ export default function ModerationSection() {
     try {
       await createPingAdmin({ user_id: newPing.user_id, type: newPing.type, lat, lon })
       setModal(false)
-      setNewPing({ ...EMPTY_PING })
+      setNewPing({ user_id: currentUser?.id ?? '', type: 'animal', lat: '', lon: '' })
       fetchPings()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
@@ -82,7 +82,11 @@ export default function ModerationSection() {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <span className="text-muted">{pings.length} pings</span>
-          <button className="btn-add" onClick={() => { setModal(true); setCreateError('') }}>
+          <button className="btn-add" onClick={() => {
+            setModal(true)
+            setCreateError('')
+            setNewPing({ user_id: currentUser?.id ?? '', type: 'animal', lat: '', lon: '' })
+          }}>
             + Creer ping
           </button>
         </div>

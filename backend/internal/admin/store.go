@@ -28,6 +28,10 @@ type Store interface {
 	// Returns the new user UUID.
 	CreateUser(ctx context.Context, req CreateUserRequest, passwordHash string) (string, error)
 
+	// DeleteUser permanently removes a user by ID.
+	// Returns ErrNotFound if the user does not exist.
+	DeleteUser(ctx context.Context, userID string) error
+
 	// ── XP Actions ────────────────────────────────────────────────────────────
 
 	// ListXPActions returns all reward action configs.

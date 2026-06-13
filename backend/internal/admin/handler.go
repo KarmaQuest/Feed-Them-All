@@ -38,6 +38,7 @@ type adminService interface {
 	ListUsers(ctx context.Context, page int, search string) ([]AdminUser, error)
 	UpdateUser(ctx context.Context, userID string, req UpdateUserRequest) error
 	CreateUser(ctx context.Context, req CreateUserRequest) (string, error)
+	DeleteUser(ctx context.Context, userID string) error
 
 	ListXPActions(ctx context.Context) ([]AdminXPAction, error)
 	UpdateXPAction(ctx context.Context, action string, req UpdateXPActionRequest) error
@@ -342,6 +343,20 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]string{"id": id}, http.StatusCreated)
+}
+
+// DeleteUser handles DELETE /admin/users/:id
+func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "id")
+	if err := h.svc.DeleteUser(r.Context(), userID); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeError(w, "user not found", http.StatusNotFound)
+			return
+		}
+		writeError(w, "failed to delete user", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // CreateXPAction handles POST /admin/xp-actions

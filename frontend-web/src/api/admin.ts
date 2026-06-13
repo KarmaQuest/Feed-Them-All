@@ -68,6 +68,9 @@ export const updateUser = (id: string, body: { role?: string; is_banned?: boolea
 export const createUser = (body: { email: string; username: string; password: string; role: string }) =>
   apiClient.post<{ id: string }>('/admin/users', body).then((r) => r.data)
 
+export const deleteUser = (id: string) =>
+  apiClient.delete(`/admin/users/${id}`)
+
 // ─── XP Actions ───────────────────────────────────────────────────────────────
 
 export const listXPActions = () =>

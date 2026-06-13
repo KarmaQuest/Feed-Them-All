@@ -431,6 +431,17 @@ func (r *Repository) CreateUser(ctx context.Context, req CreateUserRequest, pass
 	return id, nil
 }
 
+func (r *Repository) DeleteUser(ctx context.Context, userID string) error {
+	tag, err := r.db.Exec(ctx, "DELETE FROM users WHERE id = $1", userID)
+	if err != nil {
+		return fmt.Errorf("admin.DeleteUser: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // ─── XP Actions (Create) ──────────────────────────────────────────────────────
 
 func (r *Repository) CreateXPAction(ctx context.Context, req CreateXPActionRequest) error {

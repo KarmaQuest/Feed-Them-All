@@ -3,16 +3,20 @@
 // Liste paginee + filtre search. Inline edit pour role et is_banned.
 // Modale pour creer un nouvel utilisateur.
 import { useState, useEffect, useCallback } from 'react'
-import { listUsers, updateUser, createUser, type AdminUser } from '../../../api/admin'
+import { listUsers, updateUser, createUser, deleteUser, type AdminUser } from '../../../api/admin'
+import { useAuthStore } from '../../../store/auth'
 
 const EMPTY_NEW_USER = { email: '', username: '', password: '', role: 'feeder' }
 
 export default function UsersSection() {
+  const currentUser = useAuthStore((s) => s.user)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [modal, setModal] = useState(false)
   const [newUser, setNewUser] = useState({ ...EMPTY_NEW_USER })
   const [creating, setCreating] = useState(false)
@@ -49,6 +53,17 @@ export default function UsersSection() {
       )
     } finally {
       setSaving(null)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setDeleting(id)
+    try {
+      await deleteUser(id)
+      setUsers((u) => u.filter((x) => x.id !== id))
+      setConfirmDelete(null)
+    } finally {
+      setDeleting(null)
     }
   }
 
@@ -107,7 +122,8 @@ export default function UsersSection() {
               <th>XP</th>
               <th>Statut</th>
               <th>Cree le</th>
-              <th>Action</th>
+              <th>Bannir</th>
+              <th>Supprimer</th>
             </tr>
           </thead>
           <tbody>
@@ -153,6 +169,23 @@ export default function UsersSection() {
                   >
                     {saving === u.id ? '...' : u.is_banned ? 'Debannir' : 'Bannir'}
                   </button>
+                </td>
+                <td>
+                  {currentUser?.id === u.id ? (
+                    <span className="text-muted">—</span>
+                  ) : confirmDelete === u.id ? (
+                    <span style={{ display: 'flex', gap: '0.3rem' }}>
+                      <button className="btn-danger" disabled={deleting === u.id}
+                        onClick={() => handleDelete(u.id)}>
+                        {deleting === u.id ? '...' : 'Confirmer'}
+                      </button>
+                      <button className="btn-cancel" onClick={() => setConfirmDelete(null)}>✕</button>
+                    </span>
+                  ) : (
+                    <button className="btn-danger" onClick={() => setConfirmDelete(u.id)}>
+                      Supprimer
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

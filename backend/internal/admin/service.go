@@ -79,6 +79,10 @@ func (s *Service) CreateUser(ctx context.Context, req CreateUserRequest) (string
 	return s.store.CreateUser(ctx, req, string(hash))
 }
 
+func (s *Service) DeleteUser(ctx context.Context, userID string) error {
+	return s.store.DeleteUser(ctx, userID)
+}
+
 // ─── XP Actions ───────────────────────────────────────────────────────────────
 
 func (s *Service) ListXPActions(ctx context.Context) ([]AdminXPAction, error) {

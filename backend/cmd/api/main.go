@@ -190,6 +190,7 @@ func main() {
 		r.Get("/admin/users", adminHandler.ListUsers)
 		r.Post("/admin/users", adminHandler.CreateUser)
 		r.Patch("/admin/users/{id}", adminHandler.UpdateUser)
+		r.Delete("/admin/users/{id}", adminHandler.DeleteUser)
 
 		// XP Actions
 		r.Get("/admin/xp-actions", adminHandler.ListXPActions)
