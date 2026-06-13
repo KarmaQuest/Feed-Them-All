@@ -304,6 +304,25 @@ Les agents sont des fichiers `SKILL.md` dans `.github/skills/`, chargés automat
 - **Multi-devises** — devise de base USD. Stripe gère la conversion automatique. Affichage dans la devise locale de l'utilisateur (détection via IP ou préférence profil). Phase 2 : EUR, GBP, CAD.
 - **Dons one-shot** — même interface que le Premium mais sans récurrence (via `payment_intent` Stripe).
 
+### 📢 Publicités — stratégie validée (2026-06-13)
+- **Intégration dès le MVP** — pas de seuil minimum de trafic. L'app a besoin de revenus dès le départ pour payer le serveur.
+- **Web (Google AdSense)** :
+  - Bannière fixe en bas de la page `/profile` et de la page `/shop`
+  - **Jamais sur la carte** (UX catastrophique, bannirait les utilisateurs)
+- **Mobile (Google AdMob)** :
+  - Bannière fixe en bas d'écran sur les pages profil/leaderboard (hors carte)
+  - **Rewarded video** : regarder une pub = +50 XP → motivation forte, visionnage volontaire
+  - Interstitiel : uniquement au retour à l'accueil entre deux sessions, jamais pendant une action
+- **Premium** : l'abonnement Premium inclut la suppression de toutes les pubs (web + mobile)
+
+### 📊 Analytics — Matomo self-hosted (validé 2026-06-13)
+- **Outil retenu : Matomo** — solution la plus complète, 100% self-hosted, RGPD natif, aucune donnée envoyée à un tiers
+- Fonctionnalités utilisées : pages vues, événements custom (`ping_created`, `animal_fed`, `badge_unlocked`, `shop_purchase`), entonnoirs de conversion, heatmaps, suivi géographique
+- **Déploiement** : conteneur Docker sur le même VPS que le backend (Matomo + MySQL dédié)
+- **Script** : ~80 Ko — acceptable, chargé en async, n'impacte pas les performances
+- **RGPD** : anonymisation IP activée + respect Do Not Track + aucun cookie tiers
+- **Avantage vs Umami/PostHog** : données persistantes, entonnoirs natifs, compatible avec le suivi Stripe (conversion achat)
+
 ### Priorités MVP+1
 1. Fiche animal persistante (différenciant émotionnel fort)
 2. Quêtes (boost rétention simple à implémenter)

@@ -44,6 +44,10 @@
 | 2026-06-13 | `PUT /admin/xp-actions/feed` | ✅ 204 | xp_value modifié |
 | 2026-06-13 | `POST /admin/badges` | ✅ 201 | Badge créé, UUID retourné |
 | 2026-06-13 | `DELETE /admin/badges/:id` | ✅ 204 | Badge supprimé |
+| 2026-06-13 | `POST /pings` avec `animal_type=cat` + `animal_count=3` | ✅ 201 | Champs retournés OK |
+| 2026-06-13 | `POST /pings/:id/feedings` (note + animal_count_seen) | ✅ 201 | FeedingEvent créé, fed_at mis à jour, XP feed accordé |
+| 2026-06-13 | `GET /pings/:id/feedings` | ✅ 200 | Historique retourné (1 événement) |
+| 2026-06-13 | Tests unitaires `pings` après refactor (57/57) | ✅ PASS | `go test ./internal/pings/...` |
 
 ---
 
@@ -297,7 +301,18 @@
 - [ ] Widget home screen
 
 ### Infrastructure & Monétisation
-- [ ] Publicités (AdMob mobile, Google AdSense web)
+- [ ] **Publicités** — stratégie validée (2026-06-13)
+  - [ ] **Web** : Google AdSense — bannière fixe en bas de la page profil + bas de la page shop (jamais sur la carte)
+  - [ ] **Mobile** : Google AdMob — bannière bas d'écran (hors carte) + rewarded video (regarder une pub = +50 XP)
+  - [ ] Intégrer dès le MVP (pas de seuil minimum de trafic — l'app a besoin de revenus dès le départ)
+  - [ ] Placement mobile : jamais d'interstitiel pendant une action (nourrir, créer ping) — uniquement entre sessions (retour accueil)
+  - [ ] Premium : option "supprimer les pubs" incluse dans l'abonnement Premium
+- [ ] **Analytics — Matomo self-hosted** (validé 2026-06-13)
+  - [ ] Déployer Matomo via Docker sur le même VPS que le backend
+  - [ ] Intégrer le script Matomo dans `frontend-web/index.html` + `frontend-mobile/`
+  - [ ] Configurer les événements custom : `ping_created`, `animal_fed`, `badge_unlocked`, `shop_purchase`
+  - [ ] RGPD : activer l'anonymisation IP + respecter le Do Not Track
+  - [ ] Dashboard objectifs : retention J7, entonnoir création ping → nourrissage, top zones géographiques
 - [ ] **Abonnement Premium volontaire** — paliers 5$/mois · 10$/mois · montant libre (Stripe Billing, récurrent)
   - [ ] Intégration Stripe (clés API, webhook secret dans `.env`)
   - [ ] Table `subscriptions` en DB (user_id, stripe_customer_id, stripe_subscription_id, plan, status, currency)
