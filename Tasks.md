@@ -4,6 +4,37 @@
 
 ---
 
+## Tests validés en session (smoke tests manuels)
+
+> Historique des validations manuelles effectuées lors des sessions de développement.
+> Chaque ligne = un test exécuté et confirmé OK par le développeur.
+
+| Date | Endpoint / Fonctionnalité | Résultat | Notes |
+|---|---|---|---|
+| 2026-06-13 | `POST /auth/register` | ✅ 201 | Création compte OK |
+| 2026-06-13 | `POST /auth/login` | ✅ 200 | JWT retourné |
+| 2026-06-13 | `POST /auth/refresh` | ✅ 200 | Refresh token cookie HttpOnly |
+| 2026-06-13 | `POST /auth/logout` | ✅ 204 | Cookie supprimé |
+| 2026-06-13 | `POST /pings` | ✅ 201 | Ping créé avec coords |
+| 2026-06-13 | `GET /pings?lat=&lon=&radius=` | ✅ 200 | ST_DWithin retourne les pings proches |
+| 2026-06-13 | `PATCH /pings/:id/confirm` | ✅ 204 | updated_at mis à jour |
+| 2026-06-13 | `PATCH /pings/:id/fed` | ✅ 204 | fed_at enregistré |
+| 2026-06-13 | `DELETE /pings/:id` | ✅ 204 | Soft delete is_active=false |
+| 2026-06-13 | `POST /pings/:id/media` | ✅ 201 | Upload JPEG/PNG, chemin retourné |
+| 2026-06-13 | `GET /pings/:id/media` | ✅ 200 | Liste des médias |
+| 2026-06-13 | `GET /uploads/*` | ✅ 200 | Fichier servi statiquement |
+| 2026-06-13 | `POST /pings/:id/report` | ✅ 201 / 409 doublon | Signalement créé, contrainte unique OK |
+| 2026-06-13 | `GET /pings/:id/reports` | ✅ 200 | Liste avec scores up/down |
+| 2026-06-13 | `POST /pings/:id/reports/:id/vote` | ✅ 204 | Vote up↔down changeable (upsert) |
+| 2026-06-13 | Tests unitaires `auth` (20/20) | ✅ PASS | `go test ./internal/auth/...` |
+| 2026-06-13 | Tests unitaires `pings` (37/37) | ✅ PASS | `go test ./internal/pings/...` |
+| 2026-06-13 | `GET /shop/items` | ✅ 200 | 9 items (3 default, 4 quête, 2 payants) |
+| 2026-06-13 | `GET /users/me/inventory` | ✅ 200 | Inventaire vide sur nouveau compte |
+| 2026-06-13 | `POST /shop/items/:id/purchase` (payant) | ✅ 200 | `client_secret` Stripe retourné (`pi_3Thk...`) |
+| 2026-06-13 | Stripe webhook `listen` | ✅ Connecté | `localhost:8080/shop/webhook` visible dans le dashboard Stripe |
+
+---
+
 ## Phase 0 — Setup & Infrastructure Locale
 
 - [x] **P0-01** Initialiser le monorepo Git et pousser la structure sur GitHub (`Feed-Them-All`)
