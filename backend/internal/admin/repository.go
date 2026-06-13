@@ -354,7 +354,8 @@ func (r *Repository) DeleteShopItem(ctx context.Context, itemID string) error {
 const listPingsAdminQuery = `
 SELECT p.id, p.type, p.created_by, p.is_active,
        COUNT(pr.id) AS report_count,
-       to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+       to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+       p.animal_type, p.animal_count
 FROM pings p
 LEFT JOIN ping_reports pr ON pr.ping_id = p.id
 WHERE ($1 = FALSE OR p.is_active = TRUE)
@@ -373,7 +374,7 @@ func (r *Repository) ListPingsAdmin(ctx context.Context, activeOnly, flaggedOnly
 	var pings []AdminPing
 	for rows.Next() {
 		var p AdminPing
-		if err := rows.Scan(&p.ID, &p.Type, &p.CreatedBy, &p.IsActive, &p.ReportCount, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Type, &p.CreatedBy, &p.IsActive, &p.ReportCount, &p.CreatedAt, &p.AnimalType, &p.AnimalCount); err != nil {
 			return nil, fmt.Errorf("admin.ListPingsAdmin scan: %w", err)
 		}
 		pings = append(pings, p)
@@ -402,12 +403,17 @@ func (r *Repository) ForceDeactivatePing(ctx context.Context, pingID string) err
 }
 
 func (r *Repository) CreatePingAdmin(ctx context.Context, req AdminCreatePingRequest) (string, error) {
+	// Default animal_count to 1 if not provided
+	animalCount := 1
+	if req.AnimalCount != nil && *req.AnimalCount >= 1 {
+		animalCount = *req.AnimalCount
+	}
 	var id string
 	err := r.db.QueryRow(ctx,
-		`INSERT INTO pings (type, location, created_by)
-		 VALUES ($1, ST_MakePoint($2, $3)::geography, $4)
+		`INSERT INTO pings (type, location, created_by, animal_type, animal_count)
+		 VALUES ($1, ST_MakePoint($2, $3)::geography, $4, $5, $6)
 		 RETURNING id`,
-		req.Type, req.Lon, req.Lat, req.UserID,
+		req.Type, req.Lon, req.Lat, req.UserID, req.AnimalType, animalCount,
 	).Scan(&id)
 	if err != nil {
 		return "", fmt.Errorf("admin.CreatePingAdmin: %w", err)

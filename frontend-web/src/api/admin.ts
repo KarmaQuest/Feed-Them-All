@@ -53,6 +53,17 @@ export interface AdminPing {
   is_active: boolean
   report_count: number
   created_at: string
+  animal_type?: string | null
+  animal_count?: number
+}
+
+export interface FeedingEvent {
+  id: string
+  ping_id: string
+  fed_by: string
+  fed_at: string
+  note?: string | null
+  animal_count_seen?: number | null
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -130,5 +141,8 @@ export const listPingsAdmin = (params: { active?: boolean; flagged?: boolean } =
 export const forceDeactivatePing = (id: string) =>
   apiClient.delete(`/admin/pings/${id}`)
 
-export const createPingAdmin = (body: { user_id: string; type: string; lat: number; lon: number }) =>
+export const createPingAdmin = (body: { user_id: string; type: string; lat: number; lon: number; animal_type?: string; animal_count?: number }) =>
   apiClient.post<{ id: string }>('/admin/pings', body).then((r) => r.data)
+
+export const getPingFeedingEvents = (pingId: string) =>
+  apiClient.get<FeedingEvent[]>(`/pings/${pingId}/feedings`).then((r) => r.data)

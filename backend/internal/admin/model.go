@@ -112,12 +112,14 @@ type UpsertShopItemRequest struct {
 
 // AdminPing is the moderation view of a ping.
 type AdminPing struct {
-	ID          string `json:"id"`
-	Type        string `json:"type"`
-	CreatedBy   string `json:"created_by"`
-	IsActive    bool   `json:"is_active"`
-	ReportCount int    `json:"report_count"`
-	CreatedAt   string `json:"created_at"`
+	ID          string  `json:"id"`
+	Type        string  `json:"type"`
+	CreatedBy   string  `json:"created_by"`
+	IsActive    bool    `json:"is_active"`
+	ReportCount int     `json:"report_count"`
+	CreatedAt   string  `json:"created_at"`
+	AnimalType  *string `json:"animal_type,omitempty"`
+	AnimalCount int     `json:"animal_count"`
 }
 
 // ─── Admin Create Requests ─────────────────────────────────────────────────────
@@ -139,8 +141,10 @@ type CreateXPActionRequest struct {
 
 // AdminCreatePingRequest is the body of POST /admin/pings.
 type AdminCreatePingRequest struct {
-	UserID string  `json:"user_id"`
-	Type   string  `json:"type"`
-	Lat    float64 `json:"lat"`
-	Lon    float64 `json:"lon"`
+	UserID      string  `json:"user_id"`
+	Type        string  `json:"type"`
+	Lat         float64 `json:"lat"`
+	Lon         float64 `json:"lon"`
+	AnimalType  *string `json:"animal_type,omitempty"`
+	AnimalCount *int    `json:"animal_count,omitempty"`
 }

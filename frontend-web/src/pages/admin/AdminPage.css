@@ -216,6 +216,21 @@
   background: rgba(239, 68, 68, 0.22);
 }
 
+.btn-secondary {
+  background: rgba(99, 102, 241, 0.12);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 4px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.btn-secondary:hover {
+  background: rgba(99, 102, 241, 0.22);
+}
+
 .btn-add {
   display: inline-flex;
   align-items: center;
