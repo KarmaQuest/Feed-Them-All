@@ -188,10 +188,12 @@ func main() {
 
 		// Users
 		r.Get("/admin/users", adminHandler.ListUsers)
+		r.Post("/admin/users", adminHandler.CreateUser)
 		r.Patch("/admin/users/{id}", adminHandler.UpdateUser)
 
 		// XP Actions
 		r.Get("/admin/xp-actions", adminHandler.ListXPActions)
+		r.Post("/admin/xp-actions", adminHandler.CreateXPAction)
 		r.Put("/admin/xp-actions/{action}", adminHandler.UpdateXPAction)
 
 		// Level thresholds
@@ -212,6 +214,7 @@ func main() {
 
 		// Pings moderation
 		r.Get("/admin/pings", adminHandler.ListPingsAdmin)
+		r.Post("/admin/pings", adminHandler.CreatePingAdmin)
 		r.Delete("/admin/pings/{id}", adminHandler.ForceDeactivatePing)
 	})
 

@@ -119,3 +119,28 @@ type AdminPing struct {
 	ReportCount int    `json:"report_count"`
 	CreatedAt   string `json:"created_at"`
 }
+
+// ─── Admin Create Requests ─────────────────────────────────────────────────────
+
+// CreateUserRequest is the body of POST /admin/users.
+type CreateUserRequest struct {
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
+}
+
+// CreateXPActionRequest is the body of POST /admin/xp-actions.
+type CreateXPActionRequest struct {
+	Action     string `json:"action"`
+	XPValue    int    `json:"xp_value"`
+	DailyLimit int    `json:"daily_limit"`
+}
+
+// AdminCreatePingRequest is the body of POST /admin/pings.
+type AdminCreatePingRequest struct {
+	UserID string  `json:"user_id"`
+	Type   string  `json:"type"`
+	Lat    float64 `json:"lat"`
+	Lon    float64 `json:"lon"`
+}

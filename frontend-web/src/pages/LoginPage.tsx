@@ -23,12 +23,12 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const data = await login(email, password)
-      if (data.role !== 'admin') {
+      if (data.user.role !== 'admin') {
         setError('Accès refusé — compte admin requis.')
         setLoading(false)
         return
       }
-      loginStore({ id: data.user_id, username: data.username, role: data.role })
+      loginStore({ id: data.user.id, username: data.user.username, role: data.user.role })
       navigate('/admin')
     } catch {
       setError('Email ou mot de passe incorrect.')

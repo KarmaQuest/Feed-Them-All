@@ -65,6 +65,9 @@ export const listUsers = (page = 1, search = '') =>
 export const updateUser = (id: string, body: { role?: string; is_banned?: boolean }) =>
   apiClient.patch(`/admin/users/${id}`, body)
 
+export const createUser = (body: { email: string; username: string; password: string; role: string }) =>
+  apiClient.post<{ id: string }>('/admin/users', body).then((r) => r.data)
+
 // ─── XP Actions ───────────────────────────────────────────────────────────────
 
 export const listXPActions = () =>
@@ -72,6 +75,9 @@ export const listXPActions = () =>
 
 export const updateXPAction = (action: string, body: { xp_value?: number; daily_limit?: number }) =>
   apiClient.put(`/admin/xp-actions/${action}`, body)
+
+export const createXPAction = (body: { action: string; xp_value: number; daily_limit: number }) =>
+  apiClient.post('/admin/xp-actions', body)
 
 // ─── Level Thresholds ─────────────────────────────────────────────────────────
 
@@ -120,3 +126,6 @@ export const listPingsAdmin = (params: { active?: boolean; flagged?: boolean } =
 
 export const forceDeactivatePing = (id: string) =>
   apiClient.delete(`/admin/pings/${id}`)
+
+export const createPingAdmin = (body: { user_id: string; type: string; lat: number; lon: number }) =>
+  apiClient.post<{ id: string }>('/admin/pings', body).then((r) => r.data)

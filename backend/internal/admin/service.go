@@ -13,6 +13,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // ThresholdReloader is implemented by users.Service.
@@ -60,6 +62,23 @@ func (s *Service) UpdateUser(ctx context.Context, userID string, req UpdateUserR
 	return nil
 }
 
+func (s *Service) CreateUser(ctx context.Context, req CreateUserRequest) (string, error) {
+	if req.Email == "" || req.Username == "" || req.Password == "" {
+		return "", errors.New("email, username and password are required")
+	}
+	allowed := map[string]bool{"feeder": true, "giver": true, "association": true, "admin": true}
+	if req.Role == "" {
+		req.Role = "feeder"
+	} else if !allowed[req.Role] {
+		return "", fmt.Errorf("invalid role: %s", req.Role)
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("admin.CreateUser hash: %w", err)
+	}
+	return s.store.CreateUser(ctx, req, string(hash))
+}
+
 // ─── XP Actions ───────────────────────────────────────────────────────────────
 
 func (s *Service) ListXPActions(ctx context.Context) ([]AdminXPAction, error) {
@@ -74,6 +93,19 @@ func (s *Service) UpdateXPAction(ctx context.Context, action string, req UpdateX
 		return errors.New("daily_limit must be >= 1")
 	}
 	return s.store.UpdateXPAction(ctx, action, req)
+}
+
+func (s *Service) CreateXPAction(ctx context.Context, req CreateXPActionRequest) error {
+	if req.Action == "" {
+		return errors.New("action name is required")
+	}
+	if req.XPValue < 0 {
+		return errors.New("xp_value must be >= 0")
+	}
+	if req.DailyLimit < 1 {
+		return errors.New("daily_limit must be >= 1")
+	}
+	return s.store.CreateXPAction(ctx, req)
 }
 
 // ─── Level Thresholds ─────────────────────────────────────────────────────────
@@ -181,4 +213,14 @@ func (s *Service) ListPingsAdmin(ctx context.Context, activeOnly, flaggedOnly bo
 
 func (s *Service) ForceDeactivatePing(ctx context.Context, pingID string) error {
 	return s.store.ForceDeactivatePing(ctx, pingID)
+}
+
+func (s *Service) CreatePingAdmin(ctx context.Context, req AdminCreatePingRequest) (string, error) {
+	if req.UserID == "" {
+		return "", errors.New("user_id is required")
+	}
+	if req.Type != "animal" && req.Type != "food" {
+		return "", errors.New("type must be 'animal' or 'food'")
+	}
+	return s.store.CreatePingAdmin(ctx, req)
 }

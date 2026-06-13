@@ -401,6 +401,49 @@ func (r *Repository) ForceDeactivatePing(ctx context.Context, pingID string) err
 	return nil
 }
 
+func (r *Repository) CreatePingAdmin(ctx context.Context, req AdminCreatePingRequest) (string, error) {
+	var id string
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO pings (type, location, created_by)
+		 VALUES ($1, ST_MakePoint($2, $3)::geography, $4)
+		 RETURNING id`,
+		req.Type, req.Lon, req.Lat, req.UserID,
+	).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("admin.CreatePingAdmin: %w", err)
+	}
+	return id, nil
+}
+
+// ─── Users (Create) ───────────────────────────────────────────────────────────
+
+func (r *Repository) CreateUser(ctx context.Context, req CreateUserRequest, passwordHash string) (string, error) {
+	var id string
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO users (email, username, password_hash, role)
+		 VALUES ($1, $2, $3, $4)
+		 RETURNING id`,
+		req.Email, req.Username, passwordHash, req.Role,
+	).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("admin.CreateUser: %w", err)
+	}
+	return id, nil
+}
+
+// ─── XP Actions (Create) ──────────────────────────────────────────────────────
+
+func (r *Repository) CreateXPAction(ctx context.Context, req CreateXPActionRequest) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO xp_actions (action, xp_value, daily_limit) VALUES ($1, $2, $3)`,
+		req.Action, req.XPValue, req.DailyLimit,
+	)
+	if err != nil {
+		return fmt.Errorf("admin.CreateXPAction: %w", err)
+	}
+	return nil
+}
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 // nullableJSON returns nil when j is empty, otherwise the raw bytes.

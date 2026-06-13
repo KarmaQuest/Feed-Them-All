@@ -37,9 +37,11 @@ import (
 type adminService interface {
 	ListUsers(ctx context.Context, page int, search string) ([]AdminUser, error)
 	UpdateUser(ctx context.Context, userID string, req UpdateUserRequest) error
+	CreateUser(ctx context.Context, req CreateUserRequest) (string, error)
 
 	ListXPActions(ctx context.Context) ([]AdminXPAction, error)
 	UpdateXPAction(ctx context.Context, action string, req UpdateXPActionRequest) error
+	CreateXPAction(ctx context.Context, req CreateXPActionRequest) error
 
 	ListLevelThresholds(ctx context.Context) ([]LevelThreshold, error)
 	ReplaceAllThresholds(ctx context.Context, req UpsertLevelThresholdsRequest) error
@@ -56,6 +58,7 @@ type adminService interface {
 
 	ListPingsAdmin(ctx context.Context, activeOnly, flaggedOnly bool) ([]AdminPing, error)
 	ForceDeactivatePing(ctx context.Context, pingID string) error
+	CreatePingAdmin(ctx context.Context, req AdminCreatePingRequest) (string, error)
 }
 
 // Handler holds HTTP handlers for admin routes.
@@ -309,6 +312,50 @@ func (h *Handler) ForceDeactivatePing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// CreatePingAdmin handles POST /admin/pings
+func (h *Handler) CreatePingAdmin(w http.ResponseWriter, r *http.Request) {
+	var req AdminCreatePingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	id, err := h.svc.CreatePingAdmin(r.Context(), req)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, map[string]string{"id": id}, http.StatusCreated)
+}
+
+// CreateUser handles POST /admin/users
+func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var req CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	id, err := h.svc.CreateUser(r.Context(), req)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, map[string]string{"id": id}, http.StatusCreated)
+}
+
+// CreateXPAction handles POST /admin/xp-actions
+func (h *Handler) CreateXPAction(w http.ResponseWriter, r *http.Request) {
+	var req CreateXPActionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if err := h.svc.CreateXPAction(r.Context(), req); err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────

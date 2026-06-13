@@ -392,3 +392,30 @@
 .text-green { color: #34d399; }
 .text-mono { font-family: monospace; font-size: 0.8rem; }
 .loading-row td { text-align: center; color: #6b7280; padding: 2rem !important; }
+
+/* ─── modal-form-grid (label + input en 2 colonnes) ─────────────────────── */
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.modal-form-grid label {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.modal-form-grid .inline-input,
+.modal-form-grid .inline-select {
+  width: 100%;
+}
+
+/* ─── error-msg ──────────────────────────────────────────────────────────── */
+.error-msg {
+  color: #f87171;
+  font-size: 0.8125rem;
+  margin: 0.4rem 0 0;
+}

@@ -3,9 +3,12 @@ import { apiClient, setAccessToken } from './client'
 
 export interface LoginResponse {
   access_token: string
-  user_id: string
-  username: string
-  role: string
+  user: {
+    id: string
+    email: string
+    username: string
+    role: string
+  }
 }
 
 export async function login(email: string, password: string): Promise<LoginResponse> {

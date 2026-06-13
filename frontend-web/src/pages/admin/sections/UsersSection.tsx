@@ -1,15 +1,22 @@
 // src/pages/admin/sections/UsersSection.tsx — Gestion des utilisateurs.
 //
-// Liste paginée + filtre search. Inline edit pour role et is_banned.
+// Liste paginee + filtre search. Inline edit pour role et is_banned.
+// Modale pour creer un nouvel utilisateur.
 import { useState, useEffect, useCallback } from 'react'
-import { listUsers, updateUser, type AdminUser } from '../../../api/admin'
+import { listUsers, updateUser, createUser, type AdminUser } from '../../../api/admin'
+
+const EMPTY_NEW_USER = { email: '', username: '', password: '', role: 'feeder' }
 
 export default function UsersSection() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState<string | null>(null) // user id being saved
+  const [saving, setSaving] = useState<string | null>(null)
+  const [modal, setModal] = useState(false)
+  const [newUser, setNewUser] = useState({ ...EMPTY_NEW_USER })
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -45,6 +52,26 @@ export default function UsersSection() {
     }
   }
 
+  async function handleCreate() {
+    setCreateError('')
+    if (!newUser.email || !newUser.username || !newUser.password) {
+      setCreateError('Tous les champs sont requis.')
+      return
+    }
+    setCreating(true)
+    try {
+      await createUser(newUser)
+      setModal(false)
+      setNewUser({ ...EMPTY_NEW_USER })
+      fetchUsers()
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      setCreateError(msg ?? 'Erreur lors de la creation.')
+    } finally {
+      setCreating(false)
+    }
+  }
+
   return (
     <div>
       <h2 className="admin-section-title">Utilisateurs</h2>
@@ -52,27 +79,20 @@ export default function UsersSection() {
         <input
           className="search-input"
           type="search"
-          placeholder="Rechercher…"
+          placeholder="Rechercher..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
         />
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            className="btn-cancel"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            ← Préc.
+          <button className="btn-add" onClick={() => { setModal(true); setCreateError('') }}>
+            + Nouvel utilisateur
           </button>
-          <span className="text-muted" style={{ lineHeight: '2.1' }}>
-            Page {page}
-          </span>
-          <button
-            className="btn-cancel"
-            disabled={users.length < 20}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Suiv. →
+          <button className="btn-cancel" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            &larr; Prec.
+          </button>
+          <span className="text-muted" style={{ lineHeight: '2.1' }}>Page {page}</span>
+          <button className="btn-cancel" disabled={users.length < 20} onClick={() => setPage((p) => p + 1)}>
+            Suiv. &rarr;
           </button>
         </div>
       </div>
@@ -83,24 +103,24 @@ export default function UsersSection() {
             <tr>
               <th>Utilisateur</th>
               <th>Email</th>
-              <th>Rôle</th>
+              <th>Role</th>
               <th>XP</th>
               <th>Statut</th>
-              <th>Créé le</th>
+              <th>Cree le</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr className="loading-row"><td colSpan={7}>Chargement…</td></tr>
+              <tr className="loading-row"><td colSpan={7}>Chargement...</td></tr>
             ) : users.length === 0 ? (
-              <tr className="loading-row"><td colSpan={7}>Aucun utilisateur trouvé</td></tr>
+              <tr className="loading-row"><td colSpan={7}>Aucun utilisateur trouve</td></tr>
             ) : users.map((u) => (
               <tr key={u.id}>
                 <td>
                   <span style={{ fontWeight: 600, color: '#e8eaf6' }}>{u.username}</span>
                   <br />
-                  <span className="text-mono text-muted">{u.id.slice(0, 8)}…</span>
+                  <span className="text-mono text-muted">{u.id.slice(0, 8)}...</span>
                 </td>
                 <td className="text-muted">{u.email}</td>
                 <td>
@@ -119,9 +139,9 @@ export default function UsersSection() {
                 <td>{u.xp.toLocaleString()}</td>
                 <td>
                   {u.is_banned ? (
-                    <span className="text-red">🚫 Banni</span>
+                    <span className="text-red">Banni</span>
                   ) : (
-                    <span className="text-green">✓ Actif</span>
+                    <span className="text-green">Actif</span>
                   )}
                 </td>
                 <td className="text-muted">{u.created_at.slice(0, 10)}</td>
@@ -131,7 +151,7 @@ export default function UsersSection() {
                     disabled={saving === u.id}
                     onClick={() => toggleBan(u)}
                   >
-                    {saving === u.id ? '…' : u.is_banned ? 'Débannir' : 'Bannir'}
+                    {saving === u.id ? '...' : u.is_banned ? 'Debannir' : 'Bannir'}
                   </button>
                 </td>
               </tr>
@@ -139,6 +159,40 @@ export default function UsersSection() {
           </tbody>
         </table>
       </div>
+
+      {modal && (
+        <div className="modal-overlay" onClick={() => setModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Nouvel utilisateur</h3>
+            <div className="modal-form-grid">
+              <label>Email</label>
+              <input className="inline-input" type="email" value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
+              <label>Nom d'utilisateur</label>
+              <input className="inline-input" value={newUser.username}
+                onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} />
+              <label>Mot de passe</label>
+              <input className="inline-input" type="password" value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
+              <label>Role</label>
+              <select className="inline-select" value={newUser.role}
+                onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}>
+                <option value="feeder">feeder</option>
+                <option value="giver">giver</option>
+                <option value="association">association</option>
+                <option value="admin">admin</option>
+              </select>
+            </div>
+            {createError && <p className="error-msg">{createError}</p>}
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setModal(false)}>Annuler</button>
+              <button className="btn-submit" disabled={creating} onClick={handleCreate}>
+                {creating ? 'Creation...' : 'Creer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

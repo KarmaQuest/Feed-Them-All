@@ -24,6 +24,10 @@ type Store interface {
 	// Returns ErrNotFound if the user does not exist.
 	UpdateUser(ctx context.Context, userID string, req UpdateUserRequest) error
 
+	// CreateUser inserts a new user account. passwordHash is the bcrypt hash.
+	// Returns the new user UUID.
+	CreateUser(ctx context.Context, req CreateUserRequest, passwordHash string) (string, error)
+
 	// ── XP Actions ────────────────────────────────────────────────────────────
 
 	// ListXPActions returns all reward action configs.
@@ -32,6 +36,9 @@ type Store interface {
 	// UpdateXPAction modifies xp_value and/or daily_limit for the given action.
 	// Returns ErrNotFound if the action is unknown.
 	UpdateXPAction(ctx context.Context, action string, req UpdateXPActionRequest) error
+
+	// CreateXPAction inserts a new reward action config.
+	CreateXPAction(ctx context.Context, req CreateXPActionRequest) error
 
 	// ── Level Thresholds ──────────────────────────────────────────────────────
 
@@ -81,4 +88,8 @@ type Store interface {
 	// ForceDeactivatePing sets is_active=false on a ping regardless of ownership.
 	// Returns ErrNotFound if the ping does not exist.
 	ForceDeactivatePing(ctx context.Context, pingID string) error
+
+	// CreatePingAdmin inserts a new ping on behalf of any user.
+	// Returns the new ping UUID.
+	CreatePingAdmin(ctx context.Context, req AdminCreatePingRequest) (string, error)
 }
