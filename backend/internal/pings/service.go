@@ -7,7 +7,7 @@
 //   - Type d'un ping : uniquement "animal" ou "food"
 //   - Coordonnées : lat doit être entre -90 et 90, lon entre -180 et 180
 //   - Rayon de recherche : minimum 10 m, maximum 10 000 m, défaut 500 m
-//   - Les coordonnées retournées publiquement sont arrondies à 4 décimales (~11 m)
+//   - Les coordonnées retournées publiquement sont arrondies à 3 décimales (~100 m)
 //     pour protéger la vie privée des Feeders
 //   - Seul le créateur d'un ping peut le désactiver (ErrNotOwner sinon)
 //   - Upload : validation du type MIME (lecture des 512 premiers octets),

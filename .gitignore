@@ -23,6 +23,10 @@ frontend-mobile/.env
 .DS_Store
 Thumbs.db
 
+# Design assets (sprites protégés — ne pas tracker dans git)
+references/design/sprites/
+references/design/ideas/
+
 # Go
 *.test
 *.out

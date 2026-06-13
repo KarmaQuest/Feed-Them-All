@@ -31,6 +31,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -338,8 +339,10 @@ func (r *Repository) VoteReport(ctx context.Context, reportID, userID, value str
 
 // roundCoord rounds a GPS coordinate to 4 decimal places (~11 m precision).
 // Used when returning coordinates publicly to protect feeder privacy.
+// roundCoord rounds a GPS coordinate to 3 decimal places (~100 m precision)
+// to protect feeder privacy when exposing coordinates publicly.
 func roundCoord(v float64) float64 {
-	return float64(int(v*10000+0.5)) / 10000
+	return math.Round(v*1000) / 1000
 }
 
 // now is a helper to get the current UTC time (used in tests via injection if needed).

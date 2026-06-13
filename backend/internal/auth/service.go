@@ -48,7 +48,7 @@ var (
 	ErrUsernameTaken = errors.New("username already in use")
 	ErrInvalidCreds  = errors.New("invalid email or password")
 	ErrInvalidRole   = errors.New("invalid role: must be feeder, giver or association")
-	ErrWeakPassword  = errors.New("password must be at least 8 characters")
+	ErrWeakPassword  = errors.New("password must be at least 8 characters and contain at least one digit")
 )
 
 const (
@@ -87,8 +87,18 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (TokenRespo
 		return TokenResponse{}, "", ErrInvalidRole
 	}
 
-	// Validate password length
+	// Validate password strength
 	if len(req.Password) < 8 {
+		return TokenResponse{}, "", ErrWeakPassword
+	}
+	hasDigit := false
+	for _, c := range req.Password {
+		if c >= '0' && c <= '9' {
+			hasDigit = true
+			break
+		}
+	}
+	if !hasDigit {
 		return TokenResponse{}, "", ErrWeakPassword
 	}
 

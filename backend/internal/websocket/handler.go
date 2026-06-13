@@ -38,14 +38,14 @@ func NewHandler(hub *Hub, jwtSecret string) *Handler {
 		upgrader: gws.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			// In development, allow all origins. In production, restrict to the official domain.
+			// In development, allow all origins. In production, restrict to feedthemall.org.
 			CheckOrigin: func(r *http.Request) bool {
 				if isDev {
 					return true
 				}
 				origin := r.Header.Get("Origin")
-				return strings.HasPrefix(origin, "https://feedthemall.app") ||
-					strings.HasPrefix(origin, "https://www.feedthemall.app")
+				return strings.HasPrefix(origin, "https://feedthemall.org") ||
+					strings.HasPrefix(origin, "https://www.feedthemall.org")
 			},
 		},
 		jwtSecret: []byte(jwtSecret),

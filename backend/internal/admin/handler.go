@@ -80,6 +80,10 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	if page < 1 {
 		page = 1
 	}
+	// S5: cap page to prevent excessive offsets (OWASP A04)
+	if page > 100 {
+		page = 100
+	}
 	search := r.URL.Query().Get("search")
 
 	users, err := h.svc.ListUsers(r.Context(), page, search)

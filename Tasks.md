@@ -238,6 +238,34 @@
 
 ---
 
+---
+
+## Audit Qualité — Architecture & Sécurité (2026-06-13)
+
+> Résultats de l'audit pré-Phase 5. À corriger avant de commencer le frontend.
+> Légende : `[ ]` À faire · `[x]` Terminé
+
+### A — Architecture
+
+- [ ] **A1** — `frontend-web/.vite/deps/` mal ignoré par `.gitignore` (apparaît comme untracked)
+- [ ] **A2** — `references/design/sprites/` contient des binaires PNG/ZIP trackés dans git → **exclure du repo** (protection des sprites contre récupération externe)
+- [ ] **A3** — Dossier `shared/types/` absent → créer structure vide avec `index.ts` placeholder (types réels ajoutés en Phase 9)
+- [ ] **A4** — Pas de package `config/` centralisé dans le backend : les `os.Getenv()` sont éparpillés → créer `internal/config/config.go`
+
+### S — Sécurité
+
+- [ ] **S1** — CORS potentiellement en `*` → restreindre à `localhost:5173` (dev) et `https://feedthemall.org` (prod) (OWASP A05)
+- [ ] **S2** — WebSocket sans vérification `CheckOrigin` sur l'upgrader gorilla → ajouter validation de l'`Origin` header (OWASP A05)
+- [ ] **S3** — Vérifier que `STRIPE_SECRET_KEY` est lue via `os.Getenv` uniquement, jamais hardcodée (OWASP A02)
+- [ ] **S4** — Pas de validation de complexité mot de passe à l'inscription → minimum 8 chars + 1 chiffre (OWASP A07)
+- [ ] **S5** — Pagination sans cap serveur sur `GET /admin/users` → ajouter `LIMIT` max = 100 côté serveur (OWASP A04)
+- [ ] **S6** — Arrondi GPS (~100m) non implémenté → appliquer sur `GET /pings` ET `GET /admin/pings` (coordonnées stockées restent précises en DB) (OWASP A01)
+- [ ] **S7** — JWT secret `dev-secret-change-in-prod` doit déclencher une erreur fatale au démarrage si `ENV=production` (OWASP A02)
+- [ ] **S8** — Handler statique `uploads/` : vérifier qu'il utilise `http.StripPrefix` + `http.Dir` et non `filepath.Join` avec valeur user-controlled (OWASP A01 — Path Traversal)
+- [ ] **S9** — Cookie refresh token sans `SameSite=Strict` → ajouter l'attribut pour bloquer les requêtes cross-site (OWASP A01 — CSRF)
+
+---
+
 ## Backlog / Phase 2+
 
 ### Suivi des animaux

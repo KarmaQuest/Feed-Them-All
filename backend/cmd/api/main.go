@@ -33,6 +33,7 @@ import (
 
 	"github.com/KarmaQuest/feed-them-all/internal/admin"
 	"github.com/KarmaQuest/feed-them-all/internal/auth"
+	"github.com/KarmaQuest/feed-them-all/internal/config"
 	"github.com/KarmaQuest/feed-them-all/internal/gamification"
 	"github.com/KarmaQuest/feed-them-all/internal/pings"
 	"github.com/KarmaQuest/feed-them-all/internal/shop"
@@ -42,21 +43,13 @@ import (
 
 func main() {
 	// --- Config from environment ---
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		slog.Error("DATABASE_URL is required")
-		os.Exit(1)
-	}
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	cfg := config.Load()
 
 	// --- Database connection pool ---
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	db, err := pgxpool.New(ctx, dbURL)
+	db, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		slog.Error("failed to connect to database", "err", err)
 		os.Exit(1)
@@ -80,7 +73,7 @@ func main() {
 
 	// --- Wire up shop ---
 	shopRepo := shop.NewRepository(db)
-	shopSvc := shop.NewService(shopRepo, os.Getenv("STRIPE_SECRET_KEY"), os.Getenv("STRIPE_WEBHOOK_SECRET"))
+	shopSvc := shop.NewService(shopRepo, cfg.StripeSecretKey, cfg.StripeWebhookSecret)
 	shopHandler := shop.NewHandler(shopSvc)
 	gamSvc.SetItemGranter(shopSvc) // quest item unlock after each XP award
 
@@ -109,8 +102,7 @@ func main() {
 	adminMW := admin.NewMiddleware(db)
 
 	// --- Wire up WebSocket handler ---
-	jwtSecret := os.Getenv("JWT_SECRET")
-	wsHandler := ws.NewHandler(hub, jwtSecret)
+	wsHandler := ws.NewHandler(hub, cfg.JWTSecret)
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -132,7 +124,7 @@ func main() {
 	})
 
 	// Test pages — dev only
-	if os.Getenv("ENV") == "development" {
+	if cfg.IsDev() {
 		r.Handle("/tests/*", http.StripPrefix("/tests", http.FileServer(http.Dir("./tests"))))
 	}
 
@@ -220,43 +212,39 @@ func main() {
 	})
 
 	// Serve uploaded files
-	uploadDir := os.Getenv("UPLOAD_DIR")
-	if uploadDir == "" {
-		uploadDir = "./uploads"
-	}
-	r.Handle("/uploads/*", http.StripPrefix("/uploads", http.FileServer(http.Dir(uploadDir))))
+	r.Handle("/uploads/*", http.StripPrefix("/uploads", http.FileServer(http.Dir(cfg.UploadDir))))
 
 	// --- Start server ---
 	srv := &http.Server{
-		Addr:         ":" + port,
+		Addr:         ":" + cfg.Port,
 		Handler:      r,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	slog.Info("server starting", "port", port)
+	slog.Info("server starting", "port", cfg.Port)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("server error", "err", err)
 		os.Exit(1)
 	}
 }
 
-// corsMiddleware allows requests from the local frontend in development.
+// corsMiddleware restricts cross-origin requests to known frontend origins.
 func corsMiddleware(next http.Handler) http.Handler {
 	allowedOrigins := map[string]bool{
-		"http://localhost:5173": true, // Vite dev server
-		"http://localhost:8080": true, // same-origin (test pages served by Go)
+		"http://localhost:5173":       true, // Vite dev server
+		"http://localhost:8080":       true, // same-origin (test pages served by Go)
+		"https://feedthemall.org":     true, // production
+		"https://www.feedthemall.org": true, // production with www
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if os.Getenv("ENV") == "development" {
-			origin := r.Header.Get("Origin")
-			if allowedOrigins[origin] {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-				w.Header().Set("Access-Control-Allow-Credentials", "true")
-				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			}
+		origin := r.Header.Get("Origin")
+		if allowedOrigins[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
