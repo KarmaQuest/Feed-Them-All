@@ -161,7 +161,7 @@
 - [x] **PA-07** Dashboard modération pings
   - `GET /admin/pings?active=true&flagged=true` — liste des pings avec nombre de reports
   - `DELETE /admin/pings/:id` — désactivation forcée par un admin (sans vérification owner)
-- [ ] **PA-08** Frontend admin (`/admin`) — React, protégé par rôle
+- [x] **PA-08** Frontend admin (`/admin`) — React, protégé par rôle
   - Sidebar avec sections : Utilisateurs · XP & Levels · Badges · Boutique · Modération
   - Chaque section = tableau éditable (inline edit) + boutons action
   - Pas de Leaflet, pas de pixel art — interface sobre et fonctionnelle
