@@ -456,6 +456,24 @@ func (r *Repository) ListComments(ctx context.Context, pingID string) ([]AdminCo
 	return comments, nil
 }
 
+func (r *Repository) CreateComment(ctx context.Context, pingID, authorID string, req CreateCommentAdminRequest) (AdminComment, error) {
+	var c AdminComment
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO ping_comments (ping_id, author_id, content)
+		 VALUES ($1, $2, $3)
+		 RETURNING id, ping_id, author_id, content,
+		   to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+		   to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
+		pingID, authorID, req.Content,
+	).Scan(&c.ID, &c.PingID, &c.AuthorID, &c.Content, &c.CreatedAt, &c.UpdatedAt)
+	if err != nil {
+		return AdminComment{}, fmt.Errorf("admin.CreateComment: %w", err)
+	}
+	// Fetch username separately (simple join would require rewriting into a CTE)
+	_ = r.db.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, authorID).Scan(&c.Username)
+	return c, nil
+}
+
 func (r *Repository) UpdateComment(ctx context.Context, commentID string, req UpdateCommentRequest) error {
 	tag, err := r.db.Exec(ctx,
 		`UPDATE ping_comments SET content = $2, updated_at = NOW() WHERE id = $1`,
@@ -513,6 +531,22 @@ func (r *Repository) ListFeedingEventsAdmin(ctx context.Context, pingID string) 
 		events = []AdminFeedingEvent{}
 	}
 	return events, nil
+}
+
+func (r *Repository) CreateFeedingEventAdmin(ctx context.Context, pingID, fedBy string, req CreateFeedingEventAdminRequest) (AdminFeedingEvent, error) {
+	var e AdminFeedingEvent
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO ping_feeding_events (ping_id, fed_by, note, animal_count_seen)
+		 VALUES ($1, $2, $3, $4)
+		 RETURNING id, ping_id, fed_by, note, animal_count_seen,
+		   to_char(fed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
+		pingID, fedBy, req.Note, req.AnimalCountSeen,
+	).Scan(&e.ID, &e.PingID, &e.FedBy, &e.Note, &e.AnimalCountSeen, &e.FedAt)
+	if err != nil {
+		return AdminFeedingEvent{}, fmt.Errorf("admin.CreateFeedingEventAdmin: %w", err)
+	}
+	_ = r.db.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, fedBy).Scan(&e.Username)
+	return e, nil
 }
 
 func (r *Repository) UpdateFeedingEvent(ctx context.Context, eventID string, req UpdateFeedingEventRequest) error {

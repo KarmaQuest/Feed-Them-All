@@ -167,6 +167,11 @@ type UpdateCommentRequest struct {
 	Content string `json:"content"`
 }
 
+// CreateCommentAdminRequest is the body of POST /admin/pings/:id/comments.
+type CreateCommentAdminRequest struct {
+	Content string `json:"content"`
+}
+
 // ─── Feeding Events (admin view) ──────────────────────────────────────────────
 
 // AdminFeedingEvent is the admin view of a ping feeding event.
@@ -183,5 +188,11 @@ type AdminFeedingEvent struct {
 // UpdateFeedingEventRequest is the body of PATCH /admin/feedings/:id.
 type UpdateFeedingEventRequest struct {
 	Note            *string `json:"note"`
+	AnimalCountSeen *int    `json:"animal_count_seen,omitempty"`
+}
+
+// CreateFeedingEventAdminRequest is the body of POST /admin/pings/:id/feedings.
+type CreateFeedingEventAdminRequest struct {
+	Note            *string `json:"note,omitempty"`
 	AnimalCountSeen *int    `json:"animal_count_seen,omitempty"`
 }

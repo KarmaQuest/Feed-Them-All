@@ -172,6 +172,9 @@ export const getPingFeedingEvents = (pingId: string) =>
 export const listCommentsAdmin = (pingId: string) =>
   apiClient.get<AdminComment[]>(`/admin/pings/${pingId}/comments`).then((r) => r.data)
 
+export const createComment = (pingId: string, content: string) =>
+  apiClient.post<AdminComment>(`/admin/pings/${pingId}/comments`, { content }).then((r) => r.data)
+
 export const updateComment = (id: string, content: string) =>
   apiClient.patch(`/admin/comments/${id}`, { content })
 
@@ -182,6 +185,9 @@ export const deleteComment = (id: string) =>
 
 export const listFeedingEventsAdmin = (pingId: string) =>
   apiClient.get<AdminFeedingEvent[]>(`/admin/pings/${pingId}/feedings`).then((r) => r.data)
+
+export const createFeedingEventAdmin = (pingId: string, body: { note?: string | null; animal_count_seen?: number | null }) =>
+  apiClient.post<AdminFeedingEvent>(`/admin/pings/${pingId}/feedings`, body).then((r) => r.data)
 
 export const updateFeedingEvent = (id: string, body: { note?: string | null; animal_count_seen?: number | null }) =>
   apiClient.patch(`/admin/feedings/${id}`, body)

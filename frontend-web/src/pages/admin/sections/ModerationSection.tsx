@@ -8,8 +8,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   listPingsAdmin, forceDeactivatePing, createPingAdmin,
-  listFeedingEventsAdmin, updateFeedingEvent, deleteFeedingEvent,
-  listCommentsAdmin, updateComment, deleteComment,
+  listFeedingEventsAdmin, createFeedingEventAdmin, updateFeedingEvent, deleteFeedingEvent,
+  listCommentsAdmin, createComment, updateComment, deleteComment,
   type AdminPing, type AdminFeedingEvent, type AdminComment,
 } from '../../../api/admin'
 import { useAuthStore } from '../../../store/auth'
@@ -39,6 +39,8 @@ export default function ModerationSection() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [editingEvent, setEditingEvent] = useState<{ id: string; note: string; count: string } | null>(null)
   const [deletingEvent, setDeletingEvent] = useState<string | null>(null)
+  const [newEvent, setNewEvent] = useState({ note: '', count: '' })
+  const [addingEvent, setAddingEvent] = useState(false)
 
   // ── Comments popup ────────────────────────────────────────────────────────
   const [commentPing, setCommentPing] = useState<AdminPing | null>(null)
@@ -46,6 +48,8 @@ export default function ModerationSection() {
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [editingComment, setEditingComment] = useState<{ id: string; content: string } | null>(null)
   const [deletingComment, setDeletingComment] = useState<string | null>(null)
+  const [newCommentText, setNewCommentText] = useState('')
+  const [addingComment, setAddingComment] = useState(false)
 
   const fetchPings = useCallback(async () => {
     setLoading(true)
@@ -73,12 +77,28 @@ export default function ModerationSection() {
     setHistoryPing(ping)
     setHistoryEvents([])
     setEditingEvent(null)
+    setNewEvent({ note: '', count: '' })
     setHistoryLoading(true)
     try {
       const events = await listFeedingEventsAdmin(ping.id)
       setHistoryEvents(events)
     } finally {
       setHistoryLoading(false)
+    }
+  }
+
+  async function handleAddEvent() {
+    if (!historyPing) return
+    setAddingEvent(true)
+    try {
+      const body: { note?: string | null; animal_count_seen?: number | null } = {}
+      if (newEvent.note) body.note = newEvent.note
+      if (newEvent.count) body.animal_count_seen = parseInt(newEvent.count, 10)
+      const created = await createFeedingEventAdmin(historyPing.id, body)
+      setHistoryEvents((prev) => [created, ...prev])
+      setNewEvent({ note: '', count: '' })
+    } finally {
+      setAddingEvent(false)
     }
   }
 
@@ -110,12 +130,25 @@ export default function ModerationSection() {
     setCommentPing(ping)
     setComments([])
     setEditingComment(null)
+    setNewCommentText('')
     setCommentsLoading(true)
     try {
       const data = await listCommentsAdmin(ping.id)
       setComments(data)
     } finally {
       setCommentsLoading(false)
+    }
+  }
+
+  async function handleAddComment() {
+    if (!commentPing || !newCommentText.trim()) return
+    setAddingComment(true)
+    try {
+      const created = await createComment(commentPing.id, newCommentText.trim())
+      setComments((prev) => [created, ...prev])
+      setNewCommentText('')
+    } finally {
+      setAddingComment(false)
     }
   }
 
@@ -401,6 +434,34 @@ export default function ModerationSection() {
               </div>
             )}
 
+            {/* Formulaire ajout activité */}
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.75rem 1rem',
+              background: 'rgba(99,102,241,0.08)',
+              borderRadius: '8px',
+              border: '1px dashed rgba(99,102,241,0.3)',
+            }}>
+              <p style={{ fontSize: '0.8rem', color: '#a5b4fc', marginBottom: '0.5rem', fontWeight: 600 }}>+ Ajouter une activite</p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1, minWidth: '120px' }}>
+                  <label style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Note</label>
+                  <input className="inline-input" placeholder="Ex: 3 chats nourris" value={newEvent.note}
+                    onChange={(e) => setNewEvent({ ...newEvent, note: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Animaux vus</label>
+                  <input className="inline-input" style={{ width: '5rem' }} type="number" min="1" max="100"
+                    placeholder="—" value={newEvent.count}
+                    onChange={(e) => setNewEvent({ ...newEvent, count: e.target.value })} />
+                </div>
+                <button className="btn-submit" style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem', alignSelf: 'flex-end' }}
+                  disabled={addingEvent} onClick={handleAddEvent}>
+                  {addingEvent ? '...' : 'Ajouter'}
+                </button>
+              </div>
+            </div>
+
             <div className="modal-actions" style={{ marginTop: '1rem' }}>
               <button className="btn-cancel" onClick={() => { setHistoryPing(null); setEditingEvent(null) }}>Fermer</button>
             </div>
@@ -473,6 +534,31 @@ export default function ModerationSection() {
                 ))}
               </div>
             )}
+
+            {/* Formulaire ajout commentaire */}
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.75rem 1rem',
+              background: 'rgba(59,130,246,0.08)',
+              borderRadius: '8px',
+              border: '1px dashed rgba(59,130,246,0.3)',
+            }}>
+              <p style={{ fontSize: '0.8rem', color: '#93c5fd', marginBottom: '0.5rem', fontWeight: 600 }}>+ Ajouter un commentaire</p>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+                <textarea
+                  className="inline-input"
+                  style={{ flex: 1, resize: 'vertical', minHeight: '52px', fontFamily: 'inherit' }}
+                  maxLength={500}
+                  placeholder="Contenu du commentaire..."
+                  value={newCommentText}
+                  onChange={(e) => setNewCommentText(e.target.value)}
+                />
+                <button className="btn-submit" style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem', alignSelf: 'flex-end' }}
+                  disabled={addingComment || !newCommentText.trim()} onClick={handleAddComment}>
+                  {addingComment ? '...' : 'Ajouter'}
+                </button>
+              </div>
+            </div>
 
             <div className="modal-actions" style={{ marginTop: '1rem' }}>
               <button className="btn-cancel" onClick={() => { setCommentPing(null); setEditingComment(null) }}>Fermer</button>

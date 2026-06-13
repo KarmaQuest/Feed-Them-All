@@ -102,6 +102,10 @@ type Store interface {
 	// ListComments returns all comments for a given ping, newest first.
 	ListComments(ctx context.Context, pingID string) ([]AdminComment, error)
 
+	// CreateComment inserts a new comment on behalf of the given author.
+	// Returns the new comment.
+	CreateComment(ctx context.Context, pingID, authorID string, req CreateCommentAdminRequest) (AdminComment, error)
+
 	// UpdateComment edits the content of a comment. Returns ErrNotFound if missing.
 	UpdateComment(ctx context.Context, commentID string, req UpdateCommentRequest) error
 
@@ -112,6 +116,10 @@ type Store interface {
 
 	// ListFeedingEventsAdmin returns all feeding events for a given ping, newest first.
 	ListFeedingEventsAdmin(ctx context.Context, pingID string) ([]AdminFeedingEvent, error)
+
+	// CreateFeedingEventAdmin inserts a feeding event without awarding XP.
+	// Returns the new event.
+	CreateFeedingEventAdmin(ctx context.Context, pingID, fedBy string, req CreateFeedingEventAdminRequest) (AdminFeedingEvent, error)
 
 	// UpdateFeedingEvent edits note/animal_count_seen of an event. Returns ErrNotFound if missing.
 	UpdateFeedingEvent(ctx context.Context, eventID string, req UpdateFeedingEventRequest) error

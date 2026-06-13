@@ -213,7 +213,9 @@ func main() {
 		r.Post("/admin/pings", adminHandler.CreatePingAdmin)
 		r.Delete("/admin/pings/{id}", adminHandler.ForceDeactivatePing)
 		r.Get("/admin/pings/{id}/comments", adminHandler.ListCommentsAdmin)
+		r.Post("/admin/pings/{id}/comments", adminHandler.CreateCommentAdmin)
 		r.Get("/admin/pings/{id}/feedings", adminHandler.ListFeedingEventsAdmin)
+		r.Post("/admin/pings/{id}/feedings", adminHandler.CreateFeedingEventAdmin)
 
 		// Comments moderation
 		r.Patch("/admin/comments/{id}", adminHandler.UpdateComment)

@@ -30,6 +30,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/KarmaQuest/feed-them-all/internal/auth"
 )
 
 // adminService is the interface the Handler depends on.
@@ -62,10 +63,12 @@ type adminService interface {
 	CreatePingAdmin(ctx context.Context, req AdminCreatePingRequest) (string, error)
 
 	ListComments(ctx context.Context, pingID string) ([]AdminComment, error)
+	CreateComment(ctx context.Context, pingID, authorID string, req CreateCommentAdminRequest) (AdminComment, error)
 	UpdateComment(ctx context.Context, commentID string, req UpdateCommentRequest) error
 	DeleteComment(ctx context.Context, commentID string) error
 
 	ListFeedingEventsAdmin(ctx context.Context, pingID string) ([]AdminFeedingEvent, error)
+	CreateFeedingEventAdmin(ctx context.Context, pingID, fedBy string, req CreateFeedingEventAdminRequest) (AdminFeedingEvent, error)
 	UpdateFeedingEvent(ctx context.Context, eventID string, req UpdateFeedingEventRequest) error
 	DeleteFeedingEvent(ctx context.Context, eventID string) error
 }
@@ -355,6 +358,23 @@ func (h *Handler) ListCommentsAdmin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, comments, http.StatusOK)
 }
 
+// CreateCommentAdmin handles POST /admin/pings/:id/comments
+func (h *Handler) CreateCommentAdmin(w http.ResponseWriter, r *http.Request) {
+	pingID := chi.URLParam(r, "id")
+	adminID := auth.UserIDFromContext(r.Context())
+	var req CreateCommentAdminRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	comment, err := h.svc.CreateComment(r.Context(), pingID, adminID, req)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, comment, http.StatusCreated)
+}
+
 // UpdateComment handles PATCH /admin/comments/:id
 func (h *Handler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	commentID := chi.URLParam(r, "id")
@@ -399,6 +419,23 @@ func (h *Handler) ListFeedingEventsAdmin(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, events, http.StatusOK)
+}
+
+// CreateFeedingEventAdmin handles POST /admin/pings/:id/feedings
+func (h *Handler) CreateFeedingEventAdmin(w http.ResponseWriter, r *http.Request) {
+	pingID := chi.URLParam(r, "id")
+	adminID := auth.UserIDFromContext(r.Context())
+	var req CreateFeedingEventAdminRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	event, err := h.svc.CreateFeedingEventAdmin(r.Context(), pingID, adminID, req)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, event, http.StatusCreated)
 }
 
 // UpdateFeedingEvent handles PATCH /admin/feedings/:id
