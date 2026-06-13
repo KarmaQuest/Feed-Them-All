@@ -40,7 +40,7 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1>FeedThemAll</h1>
+        <img src="/logo.png" alt="FeedThemAll" className="login-logo" />
         <p>Dashboard Admin</p>
         <form onSubmit={handleSubmit}>
           <div className="form-group">

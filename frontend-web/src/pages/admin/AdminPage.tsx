@@ -48,7 +48,7 @@ export default function AdminPage() {
     <div className="admin-layout">
       <aside className="admin-sidebar">
         <div className="sidebar-logo">
-          <h2>FeedThemAll</h2>
+          <img src="/logo.png" alt="FeedThemAll" style={{ width: '72px', height: '72px', objectFit: 'contain' }} />
           <span>Admin Dashboard</span>
         </div>
         <nav className="sidebar-nav">
