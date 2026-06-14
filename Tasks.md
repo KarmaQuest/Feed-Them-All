@@ -174,30 +174,54 @@
 
 ## Phase 5 — Frontend Web : Carte & Pings
 
-- [ ] **P5-01** Intégrer **Leaflet + React-Leaflet** avec fond de carte OpenStreetMap
-- [ ] **P5-02** Afficher les pings récupérés depuis l'API sous forme de marqueurs custom pixel art
-- [ ] **P5-03** Mise à jour des marqueurs en temps réel via WebSocket (ajout/suppression de pings)
-- [ ] **P5-04** Clic sur un marqueur → popup avec historique du ping (photos, confirmations, date)
-- [ ] **P5-05** Bouton "Signaler un animal" → formulaire de création de ping avec GPS auto-détecté
-- [ ] **P5-06** Bouton "J'ai nourri" → marquer le ping comme nourri + upload photo optionnel
-- [ ] **P5-07** Géolocalisation browser (`navigator.geolocation`) — centrer la carte sur la position utilisateur
-- [ ] **P5-08** Fallback si géolocalisation refusée (carte centrée sur la ville par défaut)
+- [x] **P5-01** Intégrer **Leaflet + React-Leaflet** avec fond de carte OpenStreetMap
+- [x] **P5-02** Afficher les pings récupérés depuis l'API sous forme de marqueurs custom (SVG inline via `L.divIcon`)
+- [x] **P5-03** Mise à jour des marqueurs en temps réel via WebSocket (ajout/suppression de pings)
+- [x] **P5-04** Clic sur un marqueur → sidebar slideout droite avec détails du ping (photos, activités, date)
+- [x] **P5-05** Bouton "Signaler un animal" dans la sidebar → formulaire de création de ping avec GPS auto-détecté ou clic sur carte
+- [x] **P5-06** Bouton "J'ai nourri" → FeedForm inline dans la sidebar + upload photo optionnel + historique mis à jour
+- [x] **P5-07** Géolocalisation browser (`navigator.geolocation`) — centrer la carte sur la position utilisateur
+- [x] **P5-08** Fallback si géolocalisation refusée (carte centrée sur la ville par défaut, toast d'avertissement)
 
 ---
 
 ## Phase 6 — Frontend Web : Auth & Profil
 
-- [ ] **P6-01** Page Inscription (`/register`) — formulaire + appel API
-- [ ] **P6-02** Page Connexion (`/login`) — formulaire + stockage du token
-- [ ] **P6-03** Gestion du refresh token automatique (intercepteur Axios/fetch)
+- [x] **P6-01** Page Inscription (`/register`) — formulaire + appel API
+- [x] **P6-02** Page Connexion utilisateur (`/user-login`) + Connexion admin (`/login`) — formulaires + stockage token
+- [x] **P6-03** Gestion du refresh token automatique (intercepteur Axios + `initialize()` au démarrage de l'app)
 - [ ] **P6-04** Page Profil (`/profile`) — affichage XP, badges, avatar
-- [ ] **P6-05** Store Zustand : état auth (user, token, isLogged)
+- [x] **P6-05** Store Zustand : état auth (user, isLogged, initialize, login, logout)
 
 ---
 
 ## Phase 7 — Frontend Web : Avatar Pixel Art
 
 - [ ] **P7-01** Créer le composant `AvatarSprite` — affiche le bon sprite selon la config `{skin, outfit, accessory}`
+
+---
+
+## Phase 8 — CSS Design System & UI Admin
+
+- [x] **P8-01** Créer `src/styles/tokens.css` — variables CSS globales (couleurs, spacing, radius, fonts, transitions)
+- [x] **P8-02** Créer `src/styles/components.css` — classes réutilisables (`.btn`, `.card`, `.modal`, `.badge`, `.table`, `.input`)
+- [x] **P8-03** Créer `src/styles/utilities.css` — classes utilitaires (`.u-text-*`, `.u-flex-*`, `.u-gap-*`)
+- [x] **P8-04** Réécrire `AdminPage.css` et `LoginPage.css` avec `var()` (tokens)
+- [x] **P8-05** Sidebar admin : section "Paliers de Level" séparée de "Actions XP" (`LevelsSection.tsx`)
+- [x] **P8-06** Fix boutons toolbar/pagination admin (`.btn-page`)
+
+---
+
+## Sidebar Carte (UX Refactor — 2026-06-14)
+
+- [x] **UX-01** Supprimer la topbar horizontale — remplacée par un bouton FAB flottant (logo, coin haut-droit)
+- [x] **UX-02** Créer `MapSidebar.tsx` — panneau slideout droite avec animation CSS (`transform: translateX`)
+- [x] **UX-03** Panneau `nav` : stats (🐾 🍖 ● Live), user badge, boutons Signaler/Admin/Déconnexion
+- [x] **UX-04** Panneau `signal` : `SignalForm` inline (mode GPS ou clic sur carte)
+- [x] **UX-05** Panneau `ping` : détails ping + activités (historique nourrissages) + FeedForm + Confirmer présence
+- [x] **UX-06** Fix critique : `NavPanel`, `SignalPanel`, `PingPanel` extraits hors du composant parent → plus de démontage/remontage React
+- [x] **UX-07** Fix `ListFeedingEvents` backend : JOIN `users` pour retourner `username` (était UUID seul)
+- [x] **UX-08** Fix `FeedingEvent` frontend : champ `fed_at` (était `created_at` → `Invalid Date`)
 - [ ] **P7-02** Afficher l'avatar du Feeder connecté sur la carte Leaflet (marqueur `L.divIcon` avec sprite animé)
 - [ ] **P7-03** Mise à jour de la position de l'avatar en temps réel (push GPS → WebSocket)
 - [ ] **P7-04** Page customisation avatar (`/avatar`) — sélecteur visuel de skin/tenue/accessoire

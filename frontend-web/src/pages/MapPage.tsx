@@ -12,16 +12,14 @@ import MapSidebar from '../components/map/MapSidebar'
 import { useGeolocation } from '../hooks/useGeolocation'
 import { useMapStore } from '../store/map'
 import { useAuthStore } from '../store/auth'
-import { useWebSocketStore } from '../store/websocket'
 import { logout } from '../api/auth'
 import type { Ping } from '../api/pings'
 import './MapPage.css'
 
 export default function MapPage() {
   const { loading: geoLoading, error: geoError } = useGeolocation()
-  const { pings, addPing, setSelectedPing } = useMapStore()
-  const { user, logout: logoutStore } = useAuthStore()
-  const connected = useWebSocketStore((s) => s.connected)
+  const { addPing, setSelectedPing } = useMapStore()
+  const { logout: logoutStore } = useAuthStore()
   const navigate = useNavigate()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -58,9 +56,6 @@ export default function MapPage() {
     setPickedLon(null)
   }
 
-  const animalCount = pings.filter((p) => p.type === 'animal').length
-  const foodCount = pings.filter((p) => p.type === 'food').length
-
   return (
     <div className="map-page">
       {/* Carte plein écran */}
@@ -71,26 +66,16 @@ export default function MapPage() {
         />
       </div>
 
-      {/* Topbar minimaliste : stats à gauche, logo toggle à droite */}
-      <div className="map-topbar">
-        <div className="map-topbar__stats">
-          <span className="map-stat map-stat--animal">🐾 {animalCount}</span>
-          <span className="map-stat map-stat--food">🍖 {foodCount}</span>
-          {user && (
-            <span className={`map-stat map-stat--ws ${connected ? 'map-stat--online' : 'map-stat--offline'}`}>
-              {connected ? '● Live' : '○ Hors ligne'}
-            </span>
-          )}
-        </div>
-
+      {/* Bouton FAB — logo flottant en haut à droite pour ouvrir la sidebar */}
+      {!sidebarOpen && (
         <button
-          className="map-topbar__toggle"
-          onClick={() => setSidebarOpen((v) => !v)}
+          className="map-fab"
+          onClick={() => setSidebarOpen(true)}
           aria-label="Ouvrir le menu"
         >
-          <img src="/logo.png" alt="FeedThemAll" className="map-topbar__logo" />
+          <img src="/logo.png" alt="FeedThemAll" className="map-fab__logo" />
         </button>
-      </div>
+      )}
 
       {/* Loader géolocalisation */}
       {geoLoading && (
