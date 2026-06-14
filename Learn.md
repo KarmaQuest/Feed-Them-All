@@ -254,8 +254,10 @@ Disponible uniquement quand `ENV=development`.
 | P3 — WebSocket | Mise à jour de la carte en temps réel | ✅ Terminé |
 | P4 — Gamification | Système XP, badges, leaderboard | ✅ Terminé |
 | P4-08 — Shop | Boutique avatars, Stripe, inventaire | ✅ Terminé |
-| PA — Admin Dashboard | Interface d'administration backend + frontend | ⬜ À faire |
-| P5/6 — Frontend Web | Interface React avec la carte Leaflet | ⬜ À faire |
+| PA — Admin Dashboard | Interface d'administration backend + frontend | ✅ Terminé |
+| P5/6 — Frontend Web | Interface React avec la carte Leaflet + auth | ✅ Terminé |
+| UX Refactor — Sidebar | Suppression topbar, FAB, sidebar slideout | ✅ Terminé |
+| P6-04 — Profil | Page `/profile` : XP, badges, avatar | ⬜ À faire |
 | P7 — Avatars | Sprites pixel art des personnages | ⬜ À faire |
 | P8 — Design | Assets Aseprite / PixelLab.ai | ⬜ À faire |
 | P9 — Mobile | Application React Native | ⬜ À faire |
@@ -1485,4 +1487,213 @@ Accessible sur `http://localhost:5173/login` avec `shoptest@test.com` / `Admin12
 | 7 | `000007_avatar_shop` | Boutique avatars + inventaire | ✅ |
 | 8 | `000008_ping_animal_fields` | Type d'animal + nombre sur les pings | ✅ |
 | 9 | `000009_ping_feeding_events` | Historique des nourrissages | ✅ |
+
+---
+
+## La sidebar carte — `MapSidebar.tsx`
+
+### Pourquoi une sidebar plutôt qu'une topbar + popup ?
+
+L'ancienne version avait une **topbar horizontale** (barre en haut) et des **popups Leaflet** sur les marqueurs.
+Deux problèmes :
+
+1. La topbar prenait de la place sur mobile et cachait la carte
+2. Les popups Leaflet sont difficiles à styler et limitées en contenu
+
+La nouvelle version utilise une **sidebar slideout droite** : un panneau qui glisse depuis le bord droit
+de l'écran quand l'utilisateur clique sur le bouton FAB (logo flottant).
+
+### Le bouton FAB
+
+FAB = **Floating Action Button** — un bouton qui "flotte" au-dessus de la carte, indépendant du contenu.
+
+```css
+.map-fab {
+  position: fixed;   /* fixé par rapport à la fenêtre, pas à la page */
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;     /* au-dessus de la carte Leaflet */
+}
+```
+
+C'est le seul élément UI permanent visible sur la carte — le reste se cache dans la sidebar.
+
+### Les 3 panneaux de la sidebar
+
+| Panneau | Affiché quand | Contenu |
+|---|---|---|
+| `nav` | Par défaut à l'ouverture | Stats (🐾 🍖 ● Live), badge utilisateur, boutons action |
+| `signal` | Clic "Signaler un animal" | Formulaire `SignalForm` pour créer un ping |
+| `ping` | Clic sur un marqueur carte | Détails du ping, photos, historique nourrissages, actions |
+
+### Pourquoi les sous-composants sont déclarés hors de `MapSidebar`
+
+C'est le bug le plus subtil de la session. Voici ce qui se passait :
+
+**Avant (bugué) :**
+```tsx
+export default function MapSidebar(props) {
+  // NavPanel, SignalPanel, PingPanel déclarés ICI, à l'intérieur
+
+  function NavPanel() { ... }
+  function SignalPanel() { ... }
+  function PingPanel() { ... }
+
+  return (
+    <PingPanel ping={selectedPing} />  // ← bug ici
+  )
+}
+```
+
+À chaque rendu de `MapSidebar`, React crée de **nouvelles définitions** de `NavPanel`, `SignalPanel`, `PingPanel`.
+Pour React, ce sont des composants **différents** à chaque fois → il les **démonte et remonte** entièrement.
+Résultat : `useState` à l'intérieur (ex: `showFeedForm`) est remis à zéro instantanément → le formulaire
+s'ouvre et se referme en une fraction de seconde.
+
+**Après (correct) :**
+```tsx
+// Déclarés AU NIVEAU DU MODULE — en dehors de MapSidebar
+function NavPanel(props) { ... }
+function SignalPanel(props) { ... }
+function PingPanel(props) { ... }   // ← useState ici persistent entre les rendus
+
+export default function MapSidebar(props) {
+  return (
+    <PingPanel ping={selectedPing} />  // ← même définition à chaque rendu = React ne remonte pas
+  )
+}
+```
+
+> Règle React : si tu définis un composant **à l'intérieur** d'un autre composant, React le traite
+> comme un composant différent à chaque rendu → remontage → perte d'état.
+> Toujours déclarer les composants au niveau module (en dehors de toute fonction).
+
+---
+
+## Le store auth — état `initialized`
+
+### Le problème de la course asynchrone
+
+Quand l'application démarre, `App.tsx` appelle `initialize()` pour restaurer la session :
+
+```tsx
+useEffect(() => { initialize() }, [])
+```
+
+`initialize()` fait un appel réseau (`POST /auth/refresh`) qui prend ~100ms.
+Pendant ce temps, `user = null` dans le store.
+
+**ProtectedRoute** (gardien de `/admin`) lisait `user` **immédiatement** au démarrage :
+```tsx
+const user = useAuthStore((s) => s.user)
+if (!user) return <Navigate to="/login" />  // ← redirect immédiate ! user = null pendant 100ms
+```
+
+Résultat : même un admin connecté était redirigé vers `/login` à chaque rechargement de `/admin`.
+
+### La solution : `initialized`
+
+On ajoute un booléen `initialized` au store, mis à `true` uniquement après la réponse du serveur :
+
+```tsx
+initialize: async () => {
+  try {
+    const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true })
+    set({ user: ..., isLogged: true, initialized: true })  // ← session restaurée
+  } catch {
+    set({ user: null, isLogged: false, initialized: true }) // ← pas de session, mais c'est décidé
+  }
+}
+```
+
+`ProtectedRoute` attend que `initialized` soit `true` :
+```tsx
+const { user, initialized } = useAuthStore()
+if (!initialized) return null          // ← écran vide ~100ms, pas de redirect
+if (!user) return <Navigate to="/login" />
+return <>{children}</>
+```
+
+> Règle générale : quand une décision de routing dépend d'un appel réseau asynchrone,
+> toujours avoir un état "chargement" distinct de "non connecté". Sinon tu as des redirections fantômes.
+
+---
+
+## L'autofill navigateur et React — pourquoi le formulaire envoyait des champs vides
+
+### Le problème
+
+Quand le navigateur autofille un formulaire (champs en jaune/vert), il remplit directement les
+éléments HTML du DOM — mais il ne déclenche pas l'événement `onChange` de React.
+
+Les champs contrôlés React (`value={email}`) maintiennent leur propre état interne :
+```tsx
+const [email, setEmail] = useState('')
+<input value={email} onChange={(e) => setEmail(e.target.value)} />
+```
+
+Si l'autofill remplit le champ HTML sans déclencher `onChange` →
+`email` reste `""` dans le state React →
+le formulaire envoie `{ email: "", password: "" }` →
+le serveur répond "email ou mot de passe incorrect" →
+l'utilisateur croit que ça ne marche pas.
+
+### La solution
+
+Lire les valeurs directement depuis le DOM lors du submit, plutôt que depuis le state React :
+
+```tsx
+function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  e.preventDefault()
+  const form = e.currentTarget
+  // Lit la valeur réelle dans le DOM — autofill inclus
+  const emailVal = (form.elements.namedItem('email') as HTMLInputElement).value
+  const passwordVal = (form.elements.namedItem('password') as HTMLInputElement).value
+  onSubmit({ email: emailVal, password: passwordVal })
+}
+```
+
+`form.elements.namedItem('email')` accède à l'élément `<input name="email">` dans le DOM
+et lit sa valeur **telle qu'elle est dans le navigateur**, autofill ou saisie manuelle.
+
+> Règle : pour les formulaires de login, toujours lire depuis `e.currentTarget.elements`
+> au moment du submit plutôt que de maintenir le state en permanence avec `onChange`.
+
+---
+
+## Encodage UTF-8 et PowerShell 5.1 — une combinaison dangereuse
+
+### Le problème
+
+PowerShell 5.1 (version par défaut sur Windows) a un comportement destructeur sur les fichiers source :
+
+```powershell
+# INTERDIT — corrompt le fichier de deux façons
+$lines | Set-Content "fichier.tsx" -Encoding UTF8
+```
+
+**Effet 1 — BOM UTF-8** : les 3 premiers bytes du fichier deviennent `EF BB BF` (Byte Order Mark).
+Vite et TypeScript lisent ce BOM et génèrent des erreurs de parsing.
+
+**Effet 2 — Double-encodage** : les caractères non-ASCII (accents, emoji) sont encodés deux fois.
+`é` (1 byte UTF-8) devient `Ã©` (2 bytes lus comme 2 caractères Latin-1 séparés).
+À l'écran : `Déconnexion` → `DÃ©connexion`, `🐾` → `ðŸ¾`.
+
+### Comment détecter un fichier corrompu
+
+```powershell
+$b = [System.IO.File]::ReadAllBytes("chemin\fichier.tsx")
+"Premiers bytes: $($b[0]) $($b[1]) $($b[2])"
+# ✅ Normal    → 47 0 0  (47 = '/', début du commentaire // ...)
+# ❌ Corrompu  → 239 187 191 (BOM UTF-8)
+```
+
+### La règle
+
+Pour créer ou réécrire un fichier source `.tsx` / `.ts` / `.go` :
+- ✅ Utiliser l'outil `create_file` de l'agent VS Code (écrit en UTF-8 sans BOM)
+- ✅ Modifier avec `replace_string_in_file` (ne réécrit pas le fichier entier)
+- ❌ Jamais `Set-Content` PowerShell 5.1
+
+> Cette règle s'applique à tous les fichiers texte : `.tsx`, `.ts`, `.go`, `.css`, `.json`, `.md`.
 
