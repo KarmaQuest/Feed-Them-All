@@ -248,7 +248,10 @@ func main() {
 // corsMiddleware restricts cross-origin requests to known frontend origins.
 func corsMiddleware(next http.Handler) http.Handler {
 	allowedOrigins := map[string]bool{
-		"http://localhost:5173":       true, // Vite dev server
+		"http://localhost:5173":       true, // Vite dev server (port par défaut)
+		"http://localhost:5174":       true, // Vite dev server (port alternatif)
+		"http://localhost:5175":       true, // Vite dev server (port alternatif)
+		"http://localhost:5176":       true, // Vite dev server (port alternatif)
 		"http://localhost:8080":       true, // same-origin (test pages served by Go)
 		"https://feedthemall.org":     true, // production
 		"https://www.feedthemall.org": true, // production with www

@@ -118,6 +118,27 @@
 }
 .map-btn--login:hover { border-color: var(--primary); color: var(--primary-light); }
 
+.map-btn--logout {
+  background: none;
+  color: var(--text-faint);
+  border: 1px solid var(--border-subtle);
+  padding: 0.3rem 0.6rem;
+  font-size: var(--text-xs);
+}
+.map-btn--logout:hover { border-color: var(--danger-border); color: var(--danger); }
+
+.map-topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.map-topbar__username {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--primary-lighter);
+}
+
 /* ── Geo loader (spinner position) ──────────────────────────────────────── */
 .map-geo-loader {
   position: absolute;

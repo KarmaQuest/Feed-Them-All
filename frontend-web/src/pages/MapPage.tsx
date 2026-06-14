@@ -6,22 +6,31 @@
 //   - Toast géolocalisation refusée
 //   - Modal SignalForm
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import MapView from '../components/map/MapView'
 import SignalForm from '../components/map/SignalForm'
 import { useGeolocation } from '../hooks/useGeolocation'
 import { useMapStore } from '../store/map'
 import { useAuthStore } from '../store/auth'
 import { useWebSocketStore } from '../store/websocket'
+import { logout } from '../api/auth'
 import type { Ping } from '../api/pings'
 import './MapPage.css'
 
 export default function MapPage() {
   const { loading: geoLoading, error: geoError } = useGeolocation()
   const { pings, addPing } = useMapStore()
-  const { user } = useAuthStore()
+  const { user, logout: logoutStore } = useAuthStore()
   const connected = useWebSocketStore((s) => s.connected)
+  const navigate = useNavigate()
 
   const [showSignalForm, setShowSignalForm] = useState(false)
+
+  async function handleLogout() {
+    try { await logout() } catch { /* ignore */ }
+    logoutStore()
+    navigate('/')
+  }
 
   function onPingCreated(ping: Ping) {
     addPing(ping)
@@ -57,12 +66,20 @@ export default function MapPage() {
 
         <div className="map-topbar__actions">
           {user ? (
-            <button
-              className="map-btn map-btn--signal"
-              onClick={() => setShowSignalForm(true)}
-            >
-              + Signaler
-            </button>
+            <>
+              <button
+                className="map-btn map-btn--signal"
+                onClick={() => setShowSignalForm(true)}
+              >
+                + Signaler
+              </button>
+              <div className="map-topbar__user">
+                <span className="map-topbar__username">{user.username}</span>
+                <button className="map-btn map-btn--logout" onClick={handleLogout}>
+                  Déconnexion
+                </button>
+              </div>
+            </>
           ) : (
             <>
               <a href="/user-login" className="map-btn map-btn--login">
