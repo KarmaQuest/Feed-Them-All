@@ -520,3 +520,93 @@
   color: var(--text-muted);
   margin-bottom: 0.25rem;
 }
+
+/* ── PingPanel — Edit form (Point 2) ─────────────────────────────────────── */
+.msb-edit-form {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.msb-edit-form__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.msb-edit-form__select,
+.msb-edit-form__input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  padding: 0.35rem 0.5rem;
+}
+.msb-edit-form__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* ── PingPanel — Delete confirm (Point 2) ───────────────────────────────── */
+.msb-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.msb-btn--danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+}
+.msb-btn--danger:hover { background: var(--danger-hover, #c0392b); }
+
+/* ── PingPanel — Activity signal variant (Point 3) ──────────────────────── */
+.msb-activity-item--signal {
+  border-left: 3px solid var(--primary-lighter, #7c8cf8);
+  padding-left: 0.5rem;
+}
+.msb-activity-item__icon {
+  font-size: var(--text-sm);
+}
+
+/* ── RegisterPage — Role selector (Point 4) ─────────────────────────────── */
+.auth-roles {
+  margin-bottom: 1rem;
+}
+.auth-roles__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.auth-roles__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.auth-roles__option:hover { border-color: var(--primary); }
+.auth-roles__option--active { border-color: var(--primary); background: var(--primary-bg); }
+.auth-roles__option input[type="checkbox"] {
+  margin-top: 3px;
+  accent-color: var(--primary);
+}
+.auth-roles__icon { font-size: 1.25rem; }
+.auth-roles__option strong { display: block; font-size: var(--text-sm); color: var(--text-primary); }
+.auth-roles__option small  { display: block; font-size: var(--text-xs); color: var(--text-faint); }
+.auth-roles__option--exclusive { border-style: dashed; }
+

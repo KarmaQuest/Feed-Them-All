@@ -394,3 +394,39 @@ func (h *Handler) ListFeedingEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, events)
 }
+
+// UpdatePing handles PATCH /pings/:id.
+// Only the creator may update animal_type and/or animal_count.
+// Returns 200 OK with the updated Ping on success.
+func (h *Handler) UpdatePing(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+
+	var req UpdatePingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid JSON body", http.StatusBadRequest)
+		return
+	}
+
+	ping, err := h.svc.UpdatePing(r.Context(), id, userID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNotOwner):
+			writeError(w, "you are not allowed to edit this ping", http.StatusForbidden)
+		case errors.Is(err, ErrNotFound):
+			writeError(w, "ping not found", http.StatusNotFound)
+		case errors.Is(err, ErrInvalidAnimalType):
+			writeError(w, err.Error(), http.StatusBadRequest)
+		default:
+			slog.Error("UpdatePing failed", "id", id, "err", err)
+			writeError(w, "internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, ping)
+}

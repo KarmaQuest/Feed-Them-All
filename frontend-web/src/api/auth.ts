@@ -8,6 +8,7 @@ export interface AuthResponse {
     email: string
     username: string
     role: string
+    roles: string[]
   }
 }
 
@@ -24,8 +25,9 @@ export async function register(
   username: string,
   email: string,
   password: string,
+  roles: string[] = ['feeder'],
 ): Promise<AuthResponse> {
-  const res = await apiClient.post<AuthResponse>('/auth/register', { username, email, password })
+  const res = await apiClient.post<AuthResponse>('/auth/register', { username, email, password, roles })
   setAccessToken(res.data.access_token)
   return res.data
 }

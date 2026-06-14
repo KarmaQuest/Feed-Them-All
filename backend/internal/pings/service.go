@@ -182,6 +182,11 @@ func (s *Service) Create(ctx context.Context, userID string, req CreatePingReque
 		return Ping{}, fmt.Errorf("pings.Service.Create: %w", err)
 	}
 
+	// Insert the initial 'signal' event (best-effort; error is logged but doesn't fail the request)
+	if sigErr := s.store.AddSignalEvent(ctx, ping.ID, userID); sigErr != nil {
+		slog.Warn("pings.Service.Create: failed to insert signal event", "ping_id", ping.ID, "err", sigErr)
+	}
+
 	// Round coordinates before returning publicly
 	ping.Lat = roundCoord(ping.Lat)
 	ping.Lon = roundCoord(ping.Lon)
@@ -429,6 +434,35 @@ func (s *Service) VoteReport(ctx context.Context, reportID, userID string, req V
 	}
 
 	return s.store.VoteReport(ctx, reportID, userID, req.Value)
+}
+
+// UpdatePing allows the creator of a ping to update animal_type and/or animal_count.
+// Returns ErrNotOwner if userID is not the creator, ErrNotFound if the ping doesn't exist.
+func (s *Service) UpdatePing(ctx context.Context, pingID, userID string, req UpdatePingRequest) (Ping, error) {
+	// Validate animal_type if provided
+	if req.AnimalType != nil {
+		at := strings.ToLower(*req.AnimalType)
+		if at != "cat" && at != "dog" && at != "other" {
+			return Ping{}, ErrInvalidAnimalType
+		}
+		req.AnimalType = &at
+	}
+	// Validate animal_count if provided
+	if req.AnimalCount != nil && (*req.AnimalCount < 1 || *req.AnimalCount > 100) {
+		return Ping{}, fmt.Errorf("animal_count must be between 1 and 100")
+	}
+
+	ping, err := s.store.UpdatePing(ctx, pingID, userID, req.AnimalType, req.AnimalCount)
+	if err != nil {
+		return Ping{}, err
+	}
+
+	// Broadcast the update
+	s.broadcastUpdated(ctx, pingID)
+
+	ping.Lat = roundCoord(ping.Lat)
+	ping.Lon = roundCoord(ping.Lon)
+	return ping, nil
 }
 
 // mimeExtensions is used for validation display only.

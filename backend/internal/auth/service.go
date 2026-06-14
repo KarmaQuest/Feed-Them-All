@@ -78,14 +78,38 @@ func NewService(repo Store) *Service {
 
 // Register creates a new user and returns tokens.
 func (s *Service) Register(ctx context.Context, req RegisterRequest) (TokenResponse, string, error) {
-	// Validate role
-	role := strings.ToLower(req.Role)
-	if role == "" {
-		role = "feeder"
+	// Validate roles array
+	if len(req.Roles) == 0 {
+		req.Roles = []string{"feeder"} // backward-compat default
 	}
-	if role != "feeder" && role != "giver" && role != "association" {
-		return TokenResponse{}, "", ErrInvalidRole
+
+	allowedRoles := map[string]bool{"feeder": true, "giver": true, "association": true}
+	for _, r := range req.Roles {
+		r = strings.ToLower(r)
+		if !allowedRoles[r] {
+			return TokenResponse{}, "", ErrInvalidRole
+		}
 	}
+
+	// association is exclusive (cannot be combined with feeder/giver)
+	hasAssociation := false
+	for _, r := range req.Roles {
+		if strings.ToLower(r) == "association" {
+			hasAssociation = true
+			break
+		}
+	}
+	if hasAssociation && len(req.Roles) > 1 {
+		return TokenResponse{}, "", fmt.Errorf("association role cannot be combined with other roles")
+	}
+
+	// Normalise to lowercase
+	for i, r := range req.Roles {
+		req.Roles[i] = strings.ToLower(r)
+	}
+
+	// Primary role = first role (for display / admin checks)
+	primaryRole := req.Roles[0]
 
 	// Validate password strength
 	if len(req.Password) < 8 {
@@ -109,7 +133,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (TokenRespo
 	}
 
 	// Insert user
-	user, err := s.repo.CreateUser(ctx, req.Email, req.Username, string(hash), role)
+	user, err := s.repo.CreateUser(ctx, req.Email, req.Username, string(hash), primaryRole, req.Roles)
 	if err != nil {
 		// Map DB constraint errors to friendly sentinels
 		msg := err.Error()
@@ -213,6 +237,7 @@ func (s *Service) signToken(user User, ttl time.Duration, secret []byte) (string
 		"sub":   user.ID,
 		"email": user.Email,
 		"role":  user.Role,
+		"roles": user.Roles,
 		"iat":   now.Unix(),
 		"exp":   now.Add(ttl).Unix(),
 	}

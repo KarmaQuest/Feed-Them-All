@@ -121,7 +121,35 @@
 .auth-link:hover {
   text-decoration: underline;
 }
-  font-size: var(--text-base);
-  text-align: center;
+
+/* ── Role selector (RegisterPage) ───────────────────────────────────────── */
+.auth-roles {
+  margin-bottom: 1rem;
 }
+.auth-roles__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+.auth-roles__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border, #3a3b4a);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.auth-roles__option:hover { border-color: var(--primary, #6c7ae0); }
+.auth-roles__option--active { border-color: var(--primary, #6c7ae0); background: rgba(108,122,224,.1); }
+.auth-roles__option input[type="checkbox"] { margin-top: 3px; accent-color: var(--primary, #6c7ae0); }
+.auth-roles__icon { font-size: 1.25rem; }
+.auth-roles__option strong { display: block; font-size: 0.875rem; color: var(--text-primary, #e8e9f0); }
+.auth-roles__option small  { display: block; font-size: 0.75rem; color: var(--text-faint, #9899a8); }
+.auth-roles__option--exclusive { border-style: dashed; }
+
 

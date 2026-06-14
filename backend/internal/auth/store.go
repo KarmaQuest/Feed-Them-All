@@ -23,7 +23,7 @@ import "context"
 // Store is the interface the Service depends on.
 // The real implementation is Repository (pgx). Tests use fakeStore.
 type Store interface {
-	CreateUser(ctx context.Context, email, username, passwordHash, role string) (User, error)
+	CreateUser(ctx context.Context, email, username, passwordHash, role string, roles []string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, string, error)
 	StoreRefreshToken(ctx context.Context, userID, tokenHash string) error
 	GetRefreshToken(ctx context.Context, userID string) (string, error)

@@ -23,7 +23,8 @@ type User struct {
 	ID           string    `json:"id"`
 	Email        string    `json:"email"`
 	Username     string    `json:"username"`
-	Role         string    `json:"role"`
+	Role         string    `json:"role"` // primary role (kept for admin checks)
+	Roles        []string  `json:"roles"` // all active roles (feeder, giver, association, admin)
 	IsPremium    bool      `json:"is_premium"`
 	XP           int       `json:"xp"`
 	AvatarConfig []byte    `json:"avatar_config"`
@@ -31,11 +32,13 @@ type User struct {
 }
 
 // RegisterRequest is the payload for POST /auth/register.
+// Roles is the list of selected roles; valid non-admin values: feeder, giver, association.
+// Rules: association is exclusive; feeder and giver can be combined.
 type RegisterRequest struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Role     string `json:"role"` // feeder | giver | association
+	Email    string   `json:"email"`
+	Username string   `json:"username"`
+	Password string   `json:"password"`
+	Roles    []string `json:"roles"` // ["feeder"], ["giver"], ["feeder","giver"], ["association"]
 }
 
 // LoginRequest is the payload for POST /auth/login.

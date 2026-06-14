@@ -145,6 +145,7 @@ func main() {
 		r.Post("/pings", pingsHandler.Create)
 		r.Patch("/pings/{id}/confirm", pingsHandler.Confirm)
 		r.Patch("/pings/{id}/fed", pingsHandler.MarkFed) // kept for backward compat
+		r.Patch("/pings/{id}", pingsHandler.UpdatePing)
 		r.Delete("/pings/{id}", pingsHandler.Deactivate)
 		r.Post("/pings/{id}/media", pingsHandler.UploadMedia)
 		// Feeding history (new — preferred over PATCH /fed)

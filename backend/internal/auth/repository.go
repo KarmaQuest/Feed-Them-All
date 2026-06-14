@@ -34,15 +34,15 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 // CreateUser inserts a new user and returns the created row.
-func (r *Repository) CreateUser(ctx context.Context, email, username, passwordHash, role string) (User, error) {
+func (r *Repository) CreateUser(ctx context.Context, email, username, passwordHash, role string, roles []string) (User, error) {
 	const q = `
-		INSERT INTO users (email, username, password_hash, role)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, email, username, role, is_premium, xp, avatar_config, created_at
+		INSERT INTO users (email, username, password_hash, role, roles)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, email, username, role, roles, is_premium, xp, avatar_config, created_at
 	`
 	var u User
-	err := r.db.QueryRow(ctx, q, email, username, passwordHash, role).Scan(
-		&u.ID, &u.Email, &u.Username, &u.Role, &u.IsPremium, &u.XP, &u.AvatarConfig, &u.CreatedAt,
+	err := r.db.QueryRow(ctx, q, email, username, passwordHash, role, roles).Scan(
+		&u.ID, &u.Email, &u.Username, &u.Role, &u.Roles, &u.IsPremium, &u.XP, &u.AvatarConfig, &u.CreatedAt,
 	)
 	if err != nil {
 		return User{}, fmt.Errorf("auth.CreateUser: %w", err)
@@ -53,14 +53,14 @@ func (r *Repository) CreateUser(ctx context.Context, email, username, passwordHa
 // GetUserByEmail fetches a user and their password hash for login.
 func (r *Repository) GetUserByEmail(ctx context.Context, email string) (User, string, error) {
 	const q = `
-		SELECT id, email, username, role, is_premium, xp, avatar_config, created_at, password_hash
+		SELECT id, email, username, role, roles, is_premium, xp, avatar_config, created_at, password_hash
 		FROM users
 		WHERE email = $1
 	`
 	var u User
 	var hash string
 	err := r.db.QueryRow(ctx, q, email).Scan(
-		&u.ID, &u.Email, &u.Username, &u.Role, &u.IsPremium, &u.XP, &u.AvatarConfig, &u.CreatedAt, &hash,
+		&u.ID, &u.Email, &u.Username, &u.Role, &u.Roles, &u.IsPremium, &u.XP, &u.AvatarConfig, &u.CreatedAt, &hash,
 	)
 	if err != nil {
 		return User{}, "", fmt.Errorf("auth.GetUserByEmail: %w", err)

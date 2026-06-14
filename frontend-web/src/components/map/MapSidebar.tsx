@@ -16,6 +16,8 @@ import {
   getPingMedia,
   getPingFeedings,
   confirmPing,
+  deactivatePing,
+  updatePing as apiUpdatePing,
   type Ping,
   type PingMedia,
   type FeedingEvent,
@@ -124,13 +126,23 @@ interface PingPanelProps {
 }
 function PingPanel({ ping, onBack }: PingPanelProps) {
   const { user } = useAuthStore()
-  const { updatePing } = useMapStore()
+  const { updatePing, removePing, setSelectedPing } = useMapStore()
 
   const [media, setMedia] = useState<PingMedia[]>([])
   const [feedings, setFeedings] = useState<FeedingEvent[]>([])
   const [confirming, setConfirming] = useState(false)
   const [confirmDone, setConfirmDone] = useState(false)
   const [showFeedForm, setShowFeedForm] = useState(false)
+
+  // Edit state (Point 2)
+  const [editing, setEditing] = useState(false)
+  const [editAnimalType, setEditAnimalType] = useState<string>(ping.animal_type ?? 'other')
+  const [editAnimalCount, setEditAnimalCount] = useState<number>(ping.animal_count)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const isOwner = user?.id === ping.created_by
 
   useEffect(() => {
     getPingMedia(ping.id).then(setMedia).catch(() => {})
@@ -154,6 +166,34 @@ function PingPanel({ ping, onBack }: PingPanelProps) {
     getPingFeedings(ping.id).then(setFeedings).catch(() => {})
   }
 
+  async function handleSaveEdit() {
+    if (saving) return
+    setSaving(true)
+    try {
+      const updated = await apiUpdatePing(ping.id, {
+        animal_type: editAnimalType as 'cat' | 'dog' | 'other',
+        animal_count: editAnimalCount,
+      })
+      updatePing(updated)
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (deleting) return
+    setDeleting(true)
+    try {
+      await deactivatePing(ping.id)
+      removePing(ping.id)
+      setSelectedPing(null)
+      onBack()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const isAnimal = ping.type === 'animal'
 
   return (
@@ -169,7 +209,49 @@ function PingPanel({ ping, onBack }: PingPanelProps) {
           )}
         </div>
         <div className="msb-ping-header__date">Signalé le {formatDate(ping.created_at)}</div>
+        {isOwner && !editing && (
+          <button className="msb-btn msb-btn--ghost msb-btn--small" onClick={() => setEditing(true)}>
+            ✏️ Modifier
+          </button>
+        )}
       </div>
+
+      {/* Formulaire d'édition (Point 2) */}
+      {editing && isAnimal && (
+        <div className="msb-edit-form">
+          <label className="msb-edit-form__label">
+            Espèce
+            <select
+              className="msb-edit-form__select"
+              value={editAnimalType}
+              onChange={(e) => setEditAnimalType(e.target.value)}
+            >
+              <option value="cat">Chat</option>
+              <option value="dog">Chien</option>
+              <option value="other">Autre</option>
+            </select>
+          </label>
+          <label className="msb-edit-form__label">
+            Nombre
+            <input
+              type="number"
+              className="msb-edit-form__input"
+              min={1}
+              max={100}
+              value={editAnimalCount}
+              onChange={(e) => setEditAnimalCount(Number(e.target.value))}
+            />
+          </label>
+          <div className="msb-edit-form__actions">
+            <button className="msb-btn msb-btn--primary msb-btn--small" onClick={handleSaveEdit} disabled={saving}>
+              {saving ? '...' : 'Enregistrer'}
+            </button>
+            <button className="msb-btn msb-btn--ghost msb-btn--small" onClick={() => setEditing(false)}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Photos */}
       {media.length > 0 && (
@@ -195,6 +277,23 @@ function PingPanel({ ping, onBack }: PingPanelProps) {
           >
             {confirmDone ? '✔ Présence confirmée' : confirming ? '...' : '👍 Confirmer présence'}
           </button>
+          {isOwner && (
+            confirmDelete ? (
+              <div className="msb-delete-confirm">
+                <span>Supprimer ce ping ?</span>
+                <button className="msb-btn msb-btn--danger msb-btn--small" onClick={handleDelete} disabled={deleting}>
+                  {deleting ? '...' : 'Confirmer'}
+                </button>
+                <button className="msb-btn msb-btn--ghost msb-btn--small" onClick={() => setConfirmDelete(false)}>
+                  Annuler
+                </button>
+              </div>
+            ) : (
+              <button className="msb-btn msb-btn--ghost msb-btn--small" onClick={() => setConfirmDelete(true)}>
+                🗑️ Supprimer
+              </button>
+            )
+          )}
         </div>
       )}
 
@@ -209,20 +308,21 @@ function PingPanel({ ping, onBack }: PingPanelProps) {
 
       {/* Activités */}
       <div className="msb-activities">
-        <h4 className="msb-activities__title">Activités — {ping.id.slice(0, 8)}…</h4>
-        <p className="msb-activities__meta">
-          {ping.type} · {ping.animal_type ?? ''} · Créé le {new Date(ping.created_at).toLocaleDateString('fr-FR')}
-        </p>
+        <h4 className="msb-activities__title">Activités</h4>
 
         {feedings.length === 0 ? (
           <p className="msb-activities__empty">Aucune activité enregistrée.</p>
         ) : (
           <div className="msb-activity-list">
-            {feedings.map((f, i) => (
-              <div key={f.id} className="msb-activity-item">
+            {feedings.map((f) => (
+              <div key={f.id} className={`msb-activity-item${f.event_type === 'signal' ? ' msb-activity-item--signal' : ''}`}>
                 <div className="msb-activity-item__head">
-                  <span className="msb-activity-item__num">#{i + 1}</span>
-                  <span className="msb-activity-item__user">par {f.username}</span>
+                  <span className="msb-activity-item__icon">
+                    {f.event_type === 'signal' ? '📍' : '🍽️'}
+                  </span>
+                  <span className="msb-activity-item__user">
+                    {f.event_type === 'signal' ? `Signalé par ${f.username}` : `Nourri par ${f.username}`}
+                  </span>
                   <span className="msb-activity-item__date">{formatDate(f.fed_at)}</span>
                 </div>
                 {f.animal_count_seen != null && (
@@ -299,7 +399,11 @@ export default function MapSidebar({
           {panel === 'signal' && (
             <SignalPanel
               onBack={() => setPanel('nav')}
-              onDone={(ping) => { onPingCreated(ping); setPanel('nav') }}
+              onDone={(ping) => {
+                onPingCreated(ping)
+                setSelectedPing(ping.id)
+                setPanel('ping')
+              }}
               onRequestMapPick={onRequestMapPick}
               pickedLat={pickedLat}
               pickedLon={pickedLon}

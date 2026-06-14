@@ -41,6 +41,12 @@ export interface FeedingEvent {
   note: string | null
   animal_count_seen: number | null
   fed_at: string
+  event_type: 'signal' | 'feeding'
+}
+
+export interface UpdatePingRequest {
+  animal_type?: 'cat' | 'dog' | 'other' | null
+  animal_count?: number
 }
 
 // ─── API functions ────────────────────────────────────────────────────────────
@@ -100,4 +106,9 @@ export async function getPingFeedings(pingId: string): Promise<FeedingEvent[]> {
 
 export async function deactivatePing(pingId: string): Promise<void> {
   await apiClient.delete(`/pings/${pingId}`)
+}
+
+export async function updatePing(pingId: string, data: UpdatePingRequest): Promise<Ping> {
+  const res = await apiClient.patch<Ping>(`/pings/${pingId}`, data)
+  return res.data
 }

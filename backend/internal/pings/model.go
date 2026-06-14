@@ -62,6 +62,14 @@ type FeedingEvent struct {
 	FedAt           time.Time `json:"fed_at"`
 	Note            *string   `json:"note,omitempty"`
 	AnimalCountSeen *int      `json:"animal_count_seen,omitempty"`
+	EventType       string    `json:"event_type"` // "signal" | "feeding"
+}
+
+// UpdatePingRequest is the JSON body for PATCH /pings/:id.
+// Only the creator may update animal_type and animal_count.
+type UpdatePingRequest struct {
+	AnimalType  *string `json:"animal_type"`  // "cat", "dog", "other"
+	AnimalCount *int    `json:"animal_count"` // must be >= 1
 }
 
 // CreateFeedingEventRequest is the JSON body for POST /pings/:id/feedings.

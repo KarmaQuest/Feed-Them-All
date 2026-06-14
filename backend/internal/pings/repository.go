@@ -341,22 +341,21 @@ func (r *Repository) VoteReport(ctx context.Context, reportID, userID, value str
 }
 
 // AddFeedingEvent records a feeding action and updates pings.fed_at in a single transaction.
-// The CTE pattern ensures both writes are atomic: if either fails, both are rolled back.
 func (r *Repository) AddFeedingEvent(ctx context.Context, pingID, userID string, req CreateFeedingEventRequest) (FeedingEvent, error) {
 	const q = `
 		WITH ev AS (
-			INSERT INTO ping_feeding_events (ping_id, fed_by, note, animal_count_seen)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id, ping_id, fed_by, fed_at, note, animal_count_seen
+			INSERT INTO ping_feeding_events (ping_id, fed_by, note, animal_count_seen, event_type)
+			VALUES ($1, $2, $3, $4, 'feeding')
+			RETURNING id, ping_id, fed_by, fed_at, note, animal_count_seen, event_type
 		), upd AS (
 			UPDATE pings SET fed_at = NOW(), updated_at = NOW()
 			WHERE id = $1 AND is_active = TRUE
 		)
-		SELECT id, ping_id, fed_by, fed_at, note, animal_count_seen FROM ev
+		SELECT id, ping_id, fed_by, fed_at, note, animal_count_seen, event_type FROM ev
 	`
 	var e FeedingEvent
 	err := r.db.QueryRow(ctx, q, pingID, userID, req.Note, req.AnimalCountSeen).Scan(
-		&e.ID, &e.PingID, &e.FedBy, &e.FedAt, &e.Note, &e.AnimalCountSeen,
+		&e.ID, &e.PingID, &e.FedBy, &e.FedAt, &e.Note, &e.AnimalCountSeen, &e.EventType,
 	)
 	if err != nil {
 		return FeedingEvent{}, fmt.Errorf("pings.AddFeedingEvent: %w", err)
@@ -368,7 +367,7 @@ func (r *Repository) AddFeedingEvent(ctx context.Context, pingID, userID string,
 // Includes the username of the feeder via JOIN.
 func (r *Repository) ListFeedingEvents(ctx context.Context, pingID string) ([]FeedingEvent, error) {
 	const q = `
-		SELECT e.id, e.ping_id, e.fed_by, COALESCE(u.username, ''), e.fed_at, e.note, e.animal_count_seen
+		SELECT e.id, e.ping_id, e.fed_by, COALESCE(u.username, ''), e.fed_at, e.note, e.animal_count_seen, e.event_type
 		FROM ping_feeding_events e
 		LEFT JOIN users u ON u.id = e.fed_by
 		WHERE e.ping_id = $1
@@ -383,12 +382,68 @@ func (r *Repository) ListFeedingEvents(ctx context.Context, pingID string) ([]Fe
 	var events []FeedingEvent
 	for rows.Next() {
 		var e FeedingEvent
-		if err := rows.Scan(&e.ID, &e.PingID, &e.FedBy, &e.Username, &e.FedAt, &e.Note, &e.AnimalCountSeen); err != nil {
+		if err := rows.Scan(&e.ID, &e.PingID, &e.FedBy, &e.Username, &e.FedAt, &e.Note, &e.AnimalCountSeen, &e.EventType); err != nil {
 			return nil, fmt.Errorf("pings.ListFeedingEvents scan: %w", err)
 		}
 		events = append(events, e)
 	}
 	return events, rows.Err()
+}
+
+// AddSignalEvent inserts the initial 'signal' event when a ping is first created.
+func (r *Repository) AddSignalEvent(ctx context.Context, pingID, userID string) error {
+	const q = `
+		INSERT INTO ping_feeding_events (ping_id, fed_by, event_type)
+		VALUES ($1, $2, 'signal')
+	`
+	_, err := r.db.Exec(ctx, q, pingID, userID)
+	if err != nil {
+		return fmt.Errorf("pings.AddSignalEvent: %w", err)
+	}
+	return nil
+}
+
+// UpdatePing updates animal_type and/or animal_count for a ping.
+// Only the owner may update.
+func (r *Repository) UpdatePing(ctx context.Context, id, userID string, animalType *string, animalCount *int) (Ping, error) {
+	// Verify ownership first
+	var ownerID string
+	var isActive bool
+	err := r.db.QueryRow(ctx, `SELECT created_by, is_active FROM pings WHERE id = $1`, id).Scan(&ownerID, &isActive)
+	if err != nil {
+		return Ping{}, ErrNotFound
+	}
+	if ownerID != userID {
+		return Ping{}, ErrNotOwner
+	}
+	if !isActive {
+		return Ping{}, ErrNotFound
+	}
+
+	const q = `
+		UPDATE pings
+		SET
+			animal_type  = COALESCE($2, animal_type),
+			animal_count = COALESCE($3, animal_count),
+			updated_at   = NOW()
+		WHERE id = $1
+		RETURNING
+			id, type,
+			ST_Y(location::geometry) AS lat,
+			ST_X(location::geometry) AS lon,
+			created_by, is_active, fed_at,
+			animal_type, animal_count,
+			created_at, updated_at
+	`
+	var p Ping
+	err = r.db.QueryRow(ctx, q, id, animalType, animalCount).Scan(
+		&p.ID, &p.Type, &p.Lat, &p.Lon, &p.CreatedBy,
+		&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		return Ping{}, fmt.Errorf("pings.UpdatePing: %w", err)
+	}
+	return p, nil
 }
 
 // roundCoord rounds a GPS coordinate to 4 decimal places (~11 m precision).

@@ -28,6 +28,7 @@ interface Props {
   error: string
   onSubmit: (fields: AuthFormFields) => void
   footer?: React.ReactNode
+  extraFields?: React.ReactNode
 }
 
 export default function AuthForm({
@@ -38,6 +39,7 @@ export default function AuthForm({
   error,
   onSubmit,
   footer,
+  extraFields,
 }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -96,6 +98,7 @@ export default function AuthForm({
               required
             />
           </div>
+          {extraFields}
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? '…' : submitLabel}
           </button>

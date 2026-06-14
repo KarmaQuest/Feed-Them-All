@@ -73,6 +73,14 @@ type Store interface {
 	// Also updates pings.fed_at to the current time.
 	AddFeedingEvent(ctx context.Context, pingID, userID string, req CreateFeedingEventRequest) (FeedingEvent, error)
 
+	// AddSignalEvent inserts the initial 'signal' event when a ping is created.
+	// eventType must be "signal". Does not update fed_at.
+	AddSignalEvent(ctx context.Context, pingID, userID string) error
+
 	// ListFeedingEvents returns all feeding events for a ping, ordered most recent first.
 	ListFeedingEvents(ctx context.Context, pingID string) ([]FeedingEvent, error)
+
+	// UpdatePing updates animal_type and/or animal_count for a ping.
+	// Only the owner may update. Returns ErrNotOwner or ErrNotFound as appropriate.
+	UpdatePing(ctx context.Context, id, userID string, animalType *string, animalCount *int) (Ping, error)
 }
