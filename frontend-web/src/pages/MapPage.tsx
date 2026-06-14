@@ -71,16 +71,8 @@ export default function MapPage() {
         />
       </div>
 
-      {/* Topbar minimaliste : logo toggle + stats */}
+      {/* Topbar minimaliste : stats à gauche, logo toggle à droite */}
       <div className="map-topbar">
-        <button
-          className="map-topbar__toggle"
-          onClick={() => setSidebarOpen((v) => !v)}
-          aria-label="Ouvrir le menu"
-        >
-          <img src="/logo.png" alt="FeedThemAll" className="map-topbar__logo" />
-        </button>
-
         <div className="map-topbar__stats">
           <span className="map-stat map-stat--animal">🐾 {animalCount}</span>
           <span className="map-stat map-stat--food">🍖 {foodCount}</span>
@@ -90,6 +82,14 @@ export default function MapPage() {
             </span>
           )}
         </div>
+
+        <button
+          className="map-topbar__toggle"
+          onClick={() => setSidebarOpen((v) => !v)}
+          aria-label="Ouvrir le menu"
+        >
+          <img src="/logo.png" alt="FeedThemAll" className="map-topbar__logo" />
+        </button>
       </div>
 
       {/* Loader géolocalisation */}

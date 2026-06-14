@@ -22,6 +22,7 @@
   z-index: 1000;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
   padding: 0.4rem 0.75rem;
   background: rgba(15, 17, 23, 0.88);
@@ -29,7 +30,7 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
-/* Bouton logo */
+/* Bouton logo — côté droit */
 .map-topbar__toggle {
   flex-shrink: 0;
   background: none;
