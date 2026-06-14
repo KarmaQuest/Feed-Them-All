@@ -15,6 +15,7 @@ import {
   useMapEvents,
   useMap,
 } from 'react-leaflet'
+import type { LeafletMouseEvent } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useMapStore } from '../../store/map'
 import { useWebSocketStore } from '../../store/websocket'
@@ -87,8 +88,23 @@ function RecenterOnUser() {
   return null
 }
 
+// ── Sous-composant : intercepte un clic unique sur la carte pour choisir une position ──
+function MapClickHandler({ onPick }: { onPick: (lat: number, lon: number) => void }) {
+  useMapEvents({
+    click(e: LeafletMouseEvent) {
+      onPick(e.latlng.lat, e.latlng.lng)
+    },
+  })
+  return null
+}
+
 // ── Composant principal ────────────────────────────────────────────────────────
-export default function MapView() {
+interface MapViewProps {
+  /** Si défini, active le mode "pick" : le prochain clic sur la carte appelle ce callback */
+  onMapPick?: ((lat: number, lon: number) => void) | null
+}
+
+export default function MapView({ onMapPick }: MapViewProps = {}) {
   const { pings, userLat, userLon, feeders, setSelectedPing } = useMapStore()
   const { connect, disconnect } = useWebSocketStore()
   const { user } = useAuthStore()
@@ -121,6 +137,7 @@ export default function MapView() {
 
       <MapEventHandler />
       <RecenterOnUser />
+      {onMapPick && <MapClickHandler onPick={onMapPick} />}
 
       {/* Marqueurs pings */}
       {pings.map((ping) => {

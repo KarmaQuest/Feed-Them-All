@@ -1,8 +1,8 @@
 // src/components/map/SignalForm.tsx — Formulaire "Signaler un animal".
 //
-// Modal affichée depuis MapPage quand l'utilisateur clique "Signaler".
-// La position GPS est pré-remplie depuis useMapStore (géolocalisation).
-// L'utilisateur peut ajuster lat/lon manuellement.
+// Deux modes de position :
+//   "gps"  → coordonnées pré-remplies depuis la géolocalisation browser
+//   "map"  → l'utilisateur clique sur la carte pour choisir l'emplacement
 import { useState } from 'react'
 import { createPing, type Ping } from '../../api/pings'
 import { useMapStore } from '../../store/map'
@@ -11,26 +11,36 @@ import { useAuthStore } from '../../store/auth'
 interface Props {
   onDone: (ping: Ping) => void
   onCancel: () => void
+  /** Appelé par MapPage pour passer en mode "clic sur carte" */
+  onRequestMapPick: () => void
+  /** Position choisie via clic sur la carte (injectée depuis MapPage) */
+  pickedLat?: number | null
+  pickedLon?: number | null
 }
 
-export default function SignalForm({ onDone, onCancel }: Props) {
+export default function SignalForm({ onDone, onCancel, onRequestMapPick, pickedLat, pickedLon }: Props) {
   const { user } = useAuthStore()
   const { userLat, userLon } = useMapStore()
 
   const [type, setType] = useState<'animal' | 'food'>('animal')
   const [animalType, setAnimalType] = useState<'cat' | 'dog' | 'other'>('cat')
   const [animalCount, setAnimalCount] = useState(1)
-  const [lat, setLat] = useState(userLat?.toFixed(6) ?? '')
-  const [lon, setLon] = useState(userLon?.toFixed(6) ?? '')
+  const [posMode, setPosMode] = useState<'gps' | 'map'>('gps')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  // Coordonnées effectives selon le mode
+  const effectiveLat = posMode === 'map' && pickedLat != null
+    ? pickedLat
+    : userLat
+  const effectiveLon = posMode === 'map' && pickedLon != null
+    ? pickedLon
+    : userLon
+
   async function handleSubmit() {
     if (!user) { setError('Vous devez être connecté.'); return }
-    const parsedLat = parseFloat(lat)
-    const parsedLon = parseFloat(lon)
-    if (isNaN(parsedLat) || isNaN(parsedLon)) {
-      setError('Coordonnées GPS invalides.')
+    if (effectiveLat == null || effectiveLon == null) {
+      setError('Position non disponible. Activez la géolocalisation ou cliquez sur la carte.')
       return
     }
     setError('')
@@ -38,8 +48,8 @@ export default function SignalForm({ onDone, onCancel }: Props) {
     try {
       const ping = await createPing({
         type,
-        lat: parsedLat,
-        lon: parsedLon,
+        lat: effectiveLat,
+        lon: effectiveLon,
         ...(type === 'animal' && {
           animal_type: animalType,
           animal_count: animalCount,
@@ -100,24 +110,52 @@ export default function SignalForm({ onDone, onCancel }: Props) {
           </>
         )}
 
-        {/* Coordonnées */}
+        {/* Choix du mode de position */}
         <div className="modal-field">
-          <label>Latitude</label>
-          <input
-            type="text"
-            value={lat}
-            onChange={(e) => setLat(e.target.value)}
-            className="inline-input"
-            placeholder="48.8566"
-          />
+          <label>Position</label>
+          <div className="signal-pos-toggle">
+            <button
+              type="button"
+              className={`signal-pos-btn ${posMode === 'gps' ? 'active' : ''}`}
+              onClick={() => setPosMode('gps')}
+            >
+              📍 Ma position GPS
+            </button>
+            <button
+              type="button"
+              className={`signal-pos-btn ${posMode === 'map' ? 'active' : ''}`}
+              onClick={() => { setPosMode('map'); onRequestMapPick() }}
+            >
+              🗺 Choisir sur la carte
+            </button>
+          </div>
         </div>
-        <div className="modal-field">
-          <label>Longitude</label>
-          <input
-            type="text"
-            value={lon}
-            onChange={(e) => setLon(e.target.value)}
-            className="inline-input"
+
+        {/* Affichage des coordonnées effectives */}
+        <div className="signal-coords">
+          {posMode === 'gps' && effectiveLat != null ? (
+            <span>📍 {effectiveLat.toFixed(5)}, {effectiveLon?.toFixed(5)}</span>
+          ) : posMode === 'map' && pickedLat != null ? (
+            <span className="signal-coords--picked">✔ {pickedLat.toFixed(5)}, {pickedLon?.toFixed(5)}</span>
+          ) : posMode === 'map' ? (
+            <span className="signal-coords--hint">Cliquez sur la carte pour choisir l'emplacement</span>
+          ) : (
+            <span className="signal-coords--warn">Position GPS indisponible</span>
+          )}
+        </div>
+
+        {error && <p className="error-msg">{error}</p>}
+
+        <div className="modal-actions">
+          <button className="btn-cancel" onClick={onCancel}>Annuler</button>
+          <button className="btn-submit" disabled={submitting} onClick={handleSubmit}>
+            {submitting ? '...' : 'Signaler'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
             placeholder="2.3522"
           />
         </div>

@@ -25,6 +25,19 @@ export default function MapPage() {
   const navigate = useNavigate()
 
   const [showSignalForm, setShowSignalForm] = useState(false)
+  const [pickMode, setPickMode] = useState(false)
+  const [pickedLat, setPickedLat] = useState<number | null>(null)
+  const [pickedLon, setPickedLon] = useState<number | null>(null)
+
+  function handleRequestMapPick() {
+    setPickMode(true)
+  }
+
+  function handleMapPick(lat: number, lon: number) {
+    setPickedLat(lat)
+    setPickedLon(lon)
+    setPickMode(false) // un seul clic suffit, on désactive le mode pick
+  }
 
   async function handleLogout() {
     try { await logout() } catch { /* ignore */ }
@@ -35,6 +48,8 @@ export default function MapPage() {
   function onPingCreated(ping: Ping) {
     addPing(ping)
     setShowSignalForm(false)
+    setPickedLat(null)
+    setPickedLon(null)
   }
 
   const animalCount = pings.filter((p) => p.type === 'animal').length
@@ -43,8 +58,8 @@ export default function MapPage() {
   return (
     <div className="map-page">
       {/* Carte plein écran */}
-      <div className="map-container">
-        <MapView />
+      <div className={`map-container${pickMode ? ' map-container--pick' : ''}`}>
+        <MapView onMapPick={pickMode ? handleMapPick : null} />
       </div>
 
       {/* Barre de contrôle flottante en haut */}
@@ -75,6 +90,11 @@ export default function MapPage() {
               </button>
               <div className="map-topbar__user">
                 <span className="map-topbar__username">{user.username}</span>
+                {user.role === 'admin' && (
+                  <a href="/admin" className="map-btn map-btn--admin">
+                    ⚙ Admin
+                  </a>
+                )}
                 <button className="map-btn map-btn--logout" onClick={handleLogout}>
                   Déconnexion
                 </button>
@@ -112,8 +132,24 @@ export default function MapPage() {
       {showSignalForm && (
         <SignalForm
           onDone={onPingCreated}
-          onCancel={() => setShowSignalForm(false)}
+          onCancel={() => { setShowSignalForm(false); setPickMode(false) }}
+          onRequestMapPick={handleRequestMapPick}
+          pickedLat={pickedLat}
+          pickedLon={pickedLon}
         />
+      )}
+
+      {/* Indicateur mode pick (clic sur carte) */}
+      {pickMode && (
+        <div className="map-pick-hint">
+          🗺 Cliquez sur la carte pour placer le marqueur
+          <button
+            className="map-pick-hint__cancel"
+            onClick={() => setPickMode(false)}
+          >
+            ✕
+          </button>
+        </div>
       )}
     </div>
   )

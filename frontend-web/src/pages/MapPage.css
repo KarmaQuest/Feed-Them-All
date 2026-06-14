@@ -127,6 +127,16 @@
 }
 .map-btn--logout:hover { border-color: var(--danger-border); color: var(--danger); }
 
+.map-btn--admin {
+  background: var(--primary-bg);
+  color: var(--primary-lighter);
+  border: 1px solid var(--primary-border);
+  padding: 0.3rem 0.6rem;
+  font-size: var(--text-xs);
+  text-decoration: none;
+}
+.map-btn--admin:hover { background: var(--primary-bg-hover); }
+
 .map-topbar__user {
   display: flex;
   align-items: center;
@@ -221,7 +231,89 @@
   padding: 0.3rem 0.5rem !important;
 }
 
-/* ── Contenu de la popup ──────────────────────────────────────────────────── */
+/* ── Mode pick : curseur crosshair sur la carte ──────────────────────────── */
+.map-container--pick { cursor: crosshair; }
+
+/* ── Bandeau indicateur mode pick ────────────────────────────────────────── */
+.map-pick-hint {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(15, 17, 23, 0.92);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-full);
+  color: var(--primary-lighter);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  backdrop-filter: blur(6px);
+  animation: pick-hint-in 0.2s ease;
+}
+
+@keyframes pick-hint-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.map-pick-hint__cancel {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  line-height: 1;
+}
+.map-pick-hint__cancel:hover { color: var(--danger); }
+
+/* ── Coordonnées dans SignalForm ─────────────────────────────────────────── */
+.signal-coords {
+  font-size: var(--text-xs);
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 0.5rem;
+  color: var(--text-faint);
+}
+.signal-coords--picked { color: var(--success); }
+.signal-coords--hint   { color: var(--primary-lighter); font-style: italic; }
+.signal-coords--warn   { color: var(--warning); }
+
+/* ── Toggle GPS / carte dans SignalForm ──────────────────────────────────── */
+.signal-pos-toggle {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.signal-pos-btn {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+  font-family: var(--font-sans);
+}
+
+.signal-pos-btn.active {
+  background: var(--primary-bg);
+  border-color: var(--primary-border);
+  color: var(--primary-lighter);
+}
+.signal-pos-btn:hover:not(.active) {
+  border-color: var(--text-faint);
+  color: var(--text-secondary);
+}
 .ping-popup {
   padding: 0.875rem 1rem;
   min-width: 200px;
