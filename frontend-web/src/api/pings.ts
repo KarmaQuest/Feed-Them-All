@@ -39,8 +39,8 @@ export interface FeedingEvent {
   fed_by: string
   username: string
   note: string | null
-  animal_count_seen: number
-  created_at: string
+  animal_count_seen: number | null
+  fed_at: string
 }
 
 // ─── API functions ────────────────────────────────────────────────────────────

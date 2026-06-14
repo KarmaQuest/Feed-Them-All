@@ -16,9 +16,11 @@ interface Props {
   /** Position choisie via clic sur la carte (injectée depuis MapPage) */
   pickedLat?: number | null
   pickedLon?: number | null
+  /** Mode inline : pas de modal-overlay (utilisé dans la sidebar) */
+  inline?: boolean
 }
 
-export default function SignalForm({ onDone, onCancel, onRequestMapPick, pickedLat, pickedLon }: Props) {
+export default function SignalForm({ onDone, onCancel, onRequestMapPick, pickedLat, pickedLon, inline }: Props) {
   const { user } = useAuthStore()
   const { userLat, userLon } = useMapStore()
 
@@ -63,10 +65,10 @@ export default function SignalForm({ onDone, onCancel, onRequestMapPick, pickedL
     }
   }
 
-  return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-box signal-form" onClick={(e) => e.stopPropagation()}>
-        <h3>Signaler</h3>
+  // En mode inline (sidebar), on rend le contenu directement sans overlay
+  const content = (
+    <div className="signal-form">
+      <h3>Signaler</h3>
 
         {/* Type */}
         <div className="modal-field">
@@ -153,21 +155,13 @@ export default function SignalForm({ onDone, onCancel, onRequestMapPick, pickedL
           </button>
         </div>
       </div>
-    </div>
   )
-}
-            placeholder="2.3522"
-          />
-        </div>
 
-        {error && <p className="error-msg">{error}</p>}
-
-        <div className="modal-actions">
-          <button className="btn-cancel" onClick={onCancel}>Annuler</button>
-          <button className="btn-submit" disabled={submitting} onClick={handleSubmit}>
-            {submitting ? '...' : 'Signaler'}
-          </button>
-        </div>
+  if (inline) return content
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-box signal-form" onClick={(e) => e.stopPropagation()}>
+        {content}
       </div>
     </div>
   )

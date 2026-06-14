@@ -55,12 +55,13 @@ type CreatePingRequest struct {
 
 // FeedingEvent represents a single feeding action recorded by a user.
 type FeedingEvent struct {
-	ID               string    `json:"id"`
-	PingID           string    `json:"ping_id"`
-	FedBy            string    `json:"fed_by"`  // user UUID
-	FedAt            time.Time `json:"fed_at"`
-	Note             *string   `json:"note,omitempty"`
-	AnimalCountSeen  *int      `json:"animal_count_seen,omitempty"`
+	ID              string    `json:"id"`
+	PingID          string    `json:"ping_id"`
+	FedBy           string    `json:"fed_by"`  // user UUID
+	Username        string    `json:"username"` // display name (JOIN with users)
+	FedAt           time.Time `json:"fed_at"`
+	Note            *string   `json:"note,omitempty"`
+	AnimalCountSeen *int      `json:"animal_count_seen,omitempty"`
 }
 
 // CreateFeedingEventRequest is the JSON body for POST /pings/:id/feedings.

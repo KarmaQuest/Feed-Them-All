@@ -23,7 +23,6 @@ import { useAuthStore } from '../../store/auth'
 import { getPingsNearby } from '../../api/pings'
 import { DEFAULT_LAT, DEFAULT_LON, DEFAULT_ZOOM } from '../../hooks/useGeolocation'
 import { animalIcon, foodIcon, fedIcon, userIcon, feederIcon } from './markers'
-import PingPopup from './PingPopup'
 
 // ── Sous-composant : abonnement WS + chargement des pings à chaque déplacement ──
 function MapEventHandler() {
@@ -102,9 +101,11 @@ function MapClickHandler({ onPick }: { onPick: (lat: number, lon: number) => voi
 interface MapViewProps {
   /** Si défini, active le mode "pick" : le prochain clic sur la carte appelle ce callback */
   onMapPick?: ((lat: number, lon: number) => void) | null
+  /** Appelé quand l'utilisateur clique sur un marqueur ping */
+  onMarkerClick?: (pingId: string) => void
 }
 
-export default function MapView({ onMapPick }: MapViewProps = {}) {
+export default function MapView({ onMapPick, onMarkerClick }: MapViewProps = {}) {
   const { pings, userLat, userLon, feeders, setSelectedPing } = useMapStore()
   const { connect, disconnect } = useWebSocketStore()
   const { user } = useAuthStore()
@@ -139,7 +140,7 @@ export default function MapView({ onMapPick }: MapViewProps = {}) {
       <RecenterOnUser />
       {onMapPick && <MapClickHandler onPick={onMapPick} />}
 
-      {/* Marqueurs pings */}
+      {/* Marqueurs pings — clic ouvre la sidebar via onMarkerClick */}
       {pings.map((ping) => {
         const icon =
           ping.fed_at ? fedIcon : ping.type === 'animal' ? animalIcon : foodIcon
@@ -148,10 +149,13 @@ export default function MapView({ onMapPick }: MapViewProps = {}) {
             key={ping.id}
             position={[ping.lat, ping.lon]}
             icon={icon}
-            eventHandlers={{ click: () => setSelectedPing(ping.id) }}
-          >
-            <PingPopup ping={ping} />
-          </Marker>
+            eventHandlers={{
+              click: () => {
+                setSelectedPing(ping.id)
+                onMarkerClick?.(ping.id)
+              }
+            }}
+          />
         )
       })}
 

@@ -2,13 +2,13 @@
 //
 // Affiche la carte plein écran avec :
 //   - MapView (Leaflet + marqueurs + WS)
-//   - Barre de contrôle flottante (logo, bouton Signaler)
-//   - Toast géolocalisation refusée
-//   - Modal SignalForm
+//   - Topbar flottante minimaliste (logo bouton sidebar + stats)
+//   - MapSidebar slideout droite (nav / signal / ping detail)
+//   - Bandeau pick-mode (clic pour placer un marqueur)
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MapView from '../components/map/MapView'
-import SignalForm from '../components/map/SignalForm'
+import MapSidebar from '../components/map/MapSidebar'
 import { useGeolocation } from '../hooks/useGeolocation'
 import { useMapStore } from '../store/map'
 import { useAuthStore } from '../store/auth'
@@ -19,24 +19,31 @@ import './MapPage.css'
 
 export default function MapPage() {
   const { loading: geoLoading, error: geoError } = useGeolocation()
-  const { pings, addPing } = useMapStore()
+  const { pings, addPing, setSelectedPing } = useMapStore()
   const { user, logout: logoutStore } = useAuthStore()
   const connected = useWebSocketStore((s) => s.connected)
   const navigate = useNavigate()
 
-  const [showSignalForm, setShowSignalForm] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [pickMode, setPickMode] = useState(false)
   const [pickedLat, setPickedLat] = useState<number | null>(null)
   const [pickedLon, setPickedLon] = useState<number | null>(null)
 
   function handleRequestMapPick() {
     setPickMode(true)
+    setSidebarOpen(false)
   }
 
   function handleMapPick(lat: number, lon: number) {
     setPickedLat(lat)
     setPickedLon(lon)
-    setPickMode(false) // un seul clic suffit, on désactive le mode pick
+    setPickMode(false)
+    setSidebarOpen(true)
+  }
+
+  function handleMarkerClick(pingId: string) {
+    setSelectedPing(pingId)
+    setSidebarOpen(true)
   }
 
   async function handleLogout() {
@@ -47,7 +54,6 @@ export default function MapPage() {
 
   function onPingCreated(ping: Ping) {
     addPing(ping)
-    setShowSignalForm(false)
     setPickedLat(null)
     setPickedLon(null)
   }
@@ -59,15 +65,21 @@ export default function MapPage() {
     <div className="map-page">
       {/* Carte plein écran */}
       <div className={`map-container${pickMode ? ' map-container--pick' : ''}`}>
-        <MapView onMapPick={pickMode ? handleMapPick : null} />
+        <MapView
+          onMapPick={pickMode ? handleMapPick : null}
+          onMarkerClick={handleMarkerClick}
+        />
       </div>
 
-      {/* Barre de contrôle flottante en haut */}
+      {/* Topbar minimaliste : logo toggle + stats */}
       <div className="map-topbar">
-        <div className="map-topbar__brand">
+        <button
+          className="map-topbar__toggle"
+          onClick={() => setSidebarOpen((v) => !v)}
+          aria-label="Ouvrir le menu"
+        >
           <img src="/logo.png" alt="FeedThemAll" className="map-topbar__logo" />
-          <span className="map-topbar__name">FeedThemAll</span>
-        </div>
+        </button>
 
         <div className="map-topbar__stats">
           <span className="map-stat map-stat--animal">🐾 {animalCount}</span>
@@ -76,39 +88,6 @@ export default function MapPage() {
             <span className={`map-stat map-stat--ws ${connected ? 'map-stat--online' : 'map-stat--offline'}`}>
               {connected ? '● Live' : '○ Hors ligne'}
             </span>
-          )}
-        </div>
-
-        <div className="map-topbar__actions">
-          {user ? (
-            <>
-              <button
-                className="map-btn map-btn--signal"
-                onClick={() => setShowSignalForm(true)}
-              >
-                + Signaler
-              </button>
-              <div className="map-topbar__user">
-                <span className="map-topbar__username">{user.username}</span>
-                {user.role === 'admin' && (
-                  <a href="/admin" className="map-btn map-btn--admin">
-                    ⚙ Admin
-                  </a>
-                )}
-                <button className="map-btn map-btn--logout" onClick={handleLogout}>
-                  Déconnexion
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <a href="/user-login" className="map-btn map-btn--login">
-                Connexion
-              </a>
-              <a href="/register" className="map-btn map-btn--signal">
-                S'inscrire
-              </a>
-            </>
           )}
         </div>
       </div>
@@ -128,29 +107,30 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Modal signalement */}
-      {showSignalForm && (
-        <SignalForm
-          onDone={onPingCreated}
-          onCancel={() => { setShowSignalForm(false); setPickMode(false) }}
-          onRequestMapPick={handleRequestMapPick}
-          pickedLat={pickedLat}
-          pickedLon={pickedLon}
-        />
-      )}
-
-      {/* Indicateur mode pick (clic sur carte) */}
+      {/* Bandeau mode pick */}
       {pickMode && (
         <div className="map-pick-hint">
           🗺 Cliquez sur la carte pour placer le marqueur
           <button
             className="map-pick-hint__cancel"
-            onClick={() => setPickMode(false)}
+            onClick={() => { setPickMode(false); setSidebarOpen(true) }}
           >
             ✕
           </button>
         </div>
       )}
+
+      {/* Sidebar slideout droite */}
+      <MapSidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        pickMode={pickMode}
+        pickedLat={pickedLat}
+        pickedLon={pickedLon}
+        onRequestMapPick={handleRequestMapPick}
+        onPingCreated={onPingCreated}
+        onLogout={handleLogout}
+      />
     </div>
   )
 }

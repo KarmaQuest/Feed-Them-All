@@ -365,12 +365,14 @@ func (r *Repository) AddFeedingEvent(ctx context.Context, pingID, userID string,
 }
 
 // ListFeedingEvents returns all feeding events for a ping, most recent first.
+// Includes the username of the feeder via JOIN.
 func (r *Repository) ListFeedingEvents(ctx context.Context, pingID string) ([]FeedingEvent, error) {
 	const q = `
-		SELECT id, ping_id, fed_by, fed_at, note, animal_count_seen
-		FROM ping_feeding_events
-		WHERE ping_id = $1
-		ORDER BY fed_at DESC
+		SELECT e.id, e.ping_id, e.fed_by, COALESCE(u.username, ''), e.fed_at, e.note, e.animal_count_seen
+		FROM ping_feeding_events e
+		LEFT JOIN users u ON u.id = e.fed_by
+		WHERE e.ping_id = $1
+		ORDER BY e.fed_at DESC
 	`
 	rows, err := r.db.Query(ctx, q, pingID)
 	if err != nil {
@@ -381,7 +383,7 @@ func (r *Repository) ListFeedingEvents(ctx context.Context, pingID string) ([]Fe
 	var events []FeedingEvent
 	for rows.Next() {
 		var e FeedingEvent
-		if err := rows.Scan(&e.ID, &e.PingID, &e.FedBy, &e.FedAt, &e.Note, &e.AnimalCountSeen); err != nil {
+		if err := rows.Scan(&e.ID, &e.PingID, &e.FedBy, &e.Username, &e.FedAt, &e.Note, &e.AnimalCountSeen); err != nil {
 			return nil, fmt.Errorf("pings.ListFeedingEvents scan: %w", err)
 		}
 		events = append(events, e)

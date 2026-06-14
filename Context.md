@@ -194,6 +194,47 @@ L'univers visuel s'inspire des jeux Pokémon (pixel art, ambiance rétro-cute) p
 
 ---
 
+## Workflow de Démarrage Local (à faire à chaque session)
+
+### 1. Base de données (Docker)
+```powershell
+docker compose up -d
+# Vérifie : docker ps → feedthemallfta-db-1 Running
+```
+
+### 2. Backend Go (port 8080)
+```powershell
+# Tuer tout process qui occuperait le port 8080 avant de démarrer
+Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+
+# Puis lancer le backend
+$env:Path += ";C:\Program Files\Go\bin"
+Set-Location "D:\DesktopFiles\ProjetPerso\FeedThemAll (FTA)\backend"
+$env:DATABASE_URL="postgres://fta:fta@localhost:5432/feedthemall?sslmode=disable"
+$env:JWT_SECRET="dev-secret-change-in-prod"
+$env:JWT_REFRESH_SECRET="dev-refresh-secret-change-in-prod"
+$env:ENV="development"
+$env:PORT="8080"
+go run ./cmd/api
+```
+Attendre `INFO server starting port=8080` avant de passer à la suite.
+
+### 3. Frontend React (port 5173)
+```powershell
+Set-Location "D:\DesktopFiles\ProjetPerso\FeedThemAll (FTA)\frontend-web"
+npm run dev
+```
+
+### Règles importantes
+- **Ne jamais utiliser `&&` dans PowerShell** — utiliser `;` à la place
+- **Go n'est pas dans le PATH par défaut** — toujours ajouter `$env:Path += ";C:\Program Files\Go\bin"` avant `go run`
+- **Port 8080 déjà occupé** (erreur `bind: Only one usage`) → tuer le PID avec `Get-NetTCPConnection` puis relancer
+- **Vite se coupe** si le terminal node est fermé → relancer `npm run dev` dans `frontend-web/`
+- **Reset mot de passe** : ne jamais passer un hash bcrypt via PowerShell (l'escaping corrompt les `$`). Utiliser un mini programme Go avec `db.Exec("UPDATE ... SET password_hash = $1", hash, email)`
+- **Comptes admin** : `kervanmazuy@gmail.com` / `Karma1234` (compte Karma) et `shoptest@test.com` / `Admin1234`
+
+---
+
 ## Workflow de Validation des Tâches
 
 ### Principe : Zéro tâche non validée ne débloque la suivante
