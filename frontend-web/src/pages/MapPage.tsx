@@ -16,7 +16,7 @@ import type { Ping } from '../api/pings'
 import './MapPage.css'
 
 export default function MapPage() {
-  const { error: geoError } = useGeolocation()
+  const { loading: geoLoading, error: geoError } = useGeolocation()
   const { pings, addPing } = useMapStore()
   const { user } = useAuthStore()
   const connected = useWebSocketStore((s) => s.connected)
@@ -64,12 +64,25 @@ export default function MapPage() {
               + Signaler
             </button>
           ) : (
-            <a href="/login" className="map-btn map-btn--login">
-              Connexion
-            </a>
+            <>
+              <a href="/user-login" className="map-btn map-btn--login">
+                Connexion
+              </a>
+              <a href="/register" className="map-btn map-btn--signal">
+                S'inscrire
+              </a>
+            </>
           )}
         </div>
       </div>
+
+      {/* Loader géolocalisation */}
+      {geoLoading && (
+        <div className="map-geo-loader">
+          <span className="map-geo-loader__spinner" />
+          <span>Recherche de votre position…</span>
+        </div>
+      )}
 
       {/* Toast géolocalisation */}
       {geoError && (

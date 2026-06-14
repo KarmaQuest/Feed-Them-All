@@ -12,9 +12,9 @@ interface GeolocationState {
   error: string | null
 }
 
-// Ville par défaut si la géolocalisation est refusée : Paris
-export const DEFAULT_LAT = 48.8566
-export const DEFAULT_LON = 2.3522
+// Ville par défaut si la géolocalisation est refusée : Hô-Chi-Minh-Ville
+export const DEFAULT_LAT = 10.7769
+export const DEFAULT_LON = 106.7009
 export const DEFAULT_ZOOM = 13
 
 export function useGeolocation(): GeolocationState {

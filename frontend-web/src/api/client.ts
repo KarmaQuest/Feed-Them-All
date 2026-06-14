@@ -50,7 +50,7 @@ apiClient.interceptors.response.use(
         return apiClient(original)
       } catch {
         setAccessToken(null)
-        window.location.href = '/login'
+        window.location.href = '/user-login'
       }
     }
     return Promise.reject(error)

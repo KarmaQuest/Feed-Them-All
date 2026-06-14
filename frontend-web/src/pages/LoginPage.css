@@ -98,6 +98,29 @@
   border: 1px solid var(--danger-border);
   border-radius: var(--radius-md);
   color: var(--danger);
+}
+
+/* ── Footer liens auth (register / login) ────────────────────────────────── */
+.auth-footer {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}
+
+.auth-footer p {
+  margin: 0;
+}
+
+.auth-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
   font-size: var(--text-base);
   text-align: center;
 }

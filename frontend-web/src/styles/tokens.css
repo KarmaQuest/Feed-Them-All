@@ -98,6 +98,6 @@
   --space-8: 2rem;
 
   /* ── Z-index ────────────────────────────────────────────────── */
-  --z-modal:   50;
-  --z-overlay: 40;
+  --z-modal:   2000;  /* doit dépasser Leaflet (~400) et la topbar (1000) */
+  --z-overlay: 1900;
 }

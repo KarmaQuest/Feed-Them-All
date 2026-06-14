@@ -17,31 +17,34 @@ export default function FeedForm({ ping, onDone, onCancel }: Props) {
   const [count, setCount] = useState(ping.animal_count || 1)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [uploadWarning, setUploadWarning] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function handleSubmit() {
     setError('')
+    setUploadWarning('')
     setSubmitting(true)
     try {
       await markFed(ping.id, note || undefined, count)
-
-      // Upload photo si sélectionnée
-      const file = fileRef.current?.files?.[0]
-      if (file) {
-        await uploadPingMedia(ping.id, file)
-      }
-
-      // Retourne le ping mis à jour (fed_at = now)
-      const updated: Ping = {
-        ...ping,
-        fed_at: new Date().toISOString(),
-      }
-      onDone(updated)
     } catch {
-      setError('Erreur lors de l\'enregistrement.')
-    } finally {
+      setError('Erreur lors de l\'enregistrement du nourrissage.')
       setSubmitting(false)
+      return
     }
+
+    // Upload photo séparé — un échec n'annule pas le nourrissage
+    const file = fileRef.current?.files?.[0]
+    if (file) {
+      try {
+        await uploadPingMedia(ping.id, file)
+      } catch {
+        setUploadWarning('Nourrissage enregistré, mais l\'upload de la photo a échoué.')
+      }
+    }
+
+    setSubmitting(false)
+    const updated: Ping = { ...ping, fed_at: new Date().toISOString() }
+    onDone(updated)
   }
 
   return (
@@ -76,6 +79,7 @@ export default function FeedForm({ ping, onDone, onCancel }: Props) {
       />
 
       {error && <p className="feed-form__error">{error}</p>}
+      {uploadWarning && <p className="feed-form__warning">{uploadWarning}</p>}
 
       <div className="feed-form__actions">
         <button

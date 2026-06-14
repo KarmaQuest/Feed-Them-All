@@ -84,6 +84,9 @@
 
 .map-topbar__actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* ── Boutons flottants ────────────────────────────────────────────────────── */
@@ -114,6 +117,41 @@
   border: 1px solid var(--border-strong);
 }
 .map-btn--login:hover { border-color: var(--primary); color: var(--primary-light); }
+
+/* ── Geo loader (spinner position) ──────────────────────────────────────── */
+.map-geo-loader {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  background: rgba(15, 17, 23, 0.88);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+}
+
+.map-geo-loader__spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* ── Toast ────────────────────────────────────────────────────────────────── */
 .map-toast {
