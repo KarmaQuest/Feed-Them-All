@@ -2,7 +2,7 @@
 //
 // Affiche la carte plein écran avec :
 //   - MapView (Leaflet + marqueurs + WS)
-//   - Topbar flottante minimaliste (logo bouton sidebar + stats)
+//   - Bouton FAB flottant (logo, haut droite) pour ouvrir la sidebar
 //   - MapSidebar slideout droite (nav / signal / ping detail)
 //   - Bandeau pick-mode (clic pour placer un marqueur)
 import { useState } from 'react'

@@ -233,6 +233,22 @@ npm run dev
 - **Reset mot de passe** : ne jamais passer un hash bcrypt via PowerShell (l'escaping corrompt les `$`). Utiliser un mini programme Go avec `db.Exec("UPDATE ... SET password_hash = $1", hash, email)`
 - **Comptes admin** : `kervanmazuy@gmail.com` / `Karma1234` (compte Karma) et `shoptest@test.com` / `Admin1234`
 
+### ⚠️ RÈGLE ABSOLUE — Ne jamais modifier des fichiers source (.tsx/.ts/.go) via PowerShell `Set-Content`
+
+`Set-Content -Encoding UTF8` dans PowerShell 5.1 produit deux effets destructeurs :
+1. **BOM UTF-8** (bytes `EF BB BF`) en tête du fichier → parse error Vite/TypeScript
+2. **Double-encodage des caractères non-ASCII** (accents, emoji) → mojibake irréparable à l'écran (ex. `Déconnexion` → `DÃ©connexion`, `🐾` → `ðŸ¾`)
+
+**Règle** : pour créer ou réécrire un fichier source, utiliser **uniquement l'outil `create_file` de l'agent** (VS Code Copilot). Jamais PowerShell.
+
+**Vérification BOM si suspicion** :
+```powershell
+$b = [System.IO.File]::ReadAllBytes("chemin\fichier.tsx")
+"Premiers bytes: $($b[0]) $($b[1]) $($b[2])"
+# OK    → 47  (slash '/', début normal du fichier)
+# CORROMPU → 239 187 191 (BOM UTF-8)
+```
+
 ---
 
 ## Workflow de Validation des Tâches

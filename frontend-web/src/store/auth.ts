@@ -17,6 +17,7 @@ export interface AuthUser {
 interface AuthStore {
   user: AuthUser | null
   isLogged: boolean
+  initialized: boolean
   login: (user: AuthUser) => void
   logout: () => void
   initialize: () => Promise<void>
@@ -25,6 +26,7 @@ interface AuthStore {
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   isLogged: false,
+  initialized: false,
 
   login: (user) => set({ user, isLogged: true }),
 
@@ -48,11 +50,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
       set({
         user: { id: u.id, username: u.username, role: u.role },
         isLogged: true,
+        initialized: true,
       })
     } catch {
       // Pas de refresh token valide — session expirée ou première visite
       setAccessToken(null)
-      set({ user: null, isLogged: false })
+      set({ user: null, isLogged: false, initialized: true })
     }
   },
 }))

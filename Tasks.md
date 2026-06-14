@@ -212,6 +212,14 @@
 
 ---
 
+## Bugs & Fixes (2026-06-14)
+
+- [x] **FIX-01** `ProtectedRoute` redirigait immédiatement avant que `initialize()` soit résolu → boucle infinie sur `/admin`. Fix : ajout de `initialized: boolean` dans le store auth — `ProtectedRoute` affiche `null` jusqu'à ce que la session soit restaurée.
+- [x] **FIX-02** Autofill navigateur (Chrome/Firefox) non capté par React `useState` → login envoyait des champs vides. Fix : lecture des valeurs depuis `e.currentTarget.elements` dans `AuthForm.handleSubmit`.
+- [x] **FIX-03** `MapSidebar.tsx` corrompu (BOM UTF-8 + double-encodage) via `Set-Content` PowerShell 5.1. Fix : fichier réécrit via `create_file` (VS Code agent). **RÈGLE** : ne jamais utiliser `Set-Content` sur des fichiers source.
+
+---
+
 ## Sidebar Carte (UX Refactor — 2026-06-14)
 
 - [x] **UX-01** Supprimer la topbar horizontale — remplacée par un bouton FAB flottant (logo, coin haut-droit)

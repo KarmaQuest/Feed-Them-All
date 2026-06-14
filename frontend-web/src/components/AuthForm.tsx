@@ -43,9 +43,16 @@ export default function AuthForm({
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
 
-  function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    onSubmit({ email, password, ...(showUsername ? { username } : {}) })
+    // Lire depuis le DOM pour capter l'autofill navigateur (sinon React state = vide)
+    const form = e.currentTarget
+    const emailVal = (form.elements.namedItem('email') as HTMLInputElement).value
+    const passwordVal = (form.elements.namedItem('password') as HTMLInputElement).value
+    const usernameVal = showUsername
+      ? (form.elements.namedItem('username') as HTMLInputElement).value
+      : undefined
+    onSubmit({ email: emailVal, password: passwordVal, ...(showUsername ? { username: usernameVal } : {}) })
   }
 
   return (
