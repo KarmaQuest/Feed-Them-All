@@ -101,7 +101,7 @@ export async function uploadPingMedia(
 
 export async function getPingFeedings(pingId: string): Promise<FeedingEvent[]> {
   const res = await apiClient.get<FeedingEvent[]>(`/pings/${pingId}/feedings`)
-  return res.data
+  return res.data ?? []
 }
 
 export async function deactivatePing(pingId: string): Promise<void> {

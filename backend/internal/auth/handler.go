@@ -181,7 +181,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		Secure:   false, // set true in production (HTTPS only)
 	})
 	w.WriteHeader(http.StatusNoContent)
@@ -200,7 +200,7 @@ func setRefreshCookie(w http.ResponseWriter, token string) {
 		Path:     "/",
 		MaxAge:   int((7 * 24 * time.Hour).Seconds()),
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode, // Lax : compatible Firefox + navigation cross-tab
 		Secure:   false, // set true in production
 	})
 }

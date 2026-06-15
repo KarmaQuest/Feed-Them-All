@@ -387,6 +387,9 @@ func (r *Repository) ListFeedingEvents(ctx context.Context, pingID string) ([]Fe
 		}
 		events = append(events, e)
 	}
+	if events == nil {
+		events = []FeedingEvent{}
+	}
 	return events, rows.Err()
 }
 

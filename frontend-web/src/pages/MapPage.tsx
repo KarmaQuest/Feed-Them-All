@@ -81,7 +81,7 @@ export default function MapPage() {
       {geoLoading && (
         <div className="map-geo-loader">
           <span className="map-geo-loader__spinner" />
-          <span>Recherche de votre position…</span>
+          <span className="map-geo-loader__label">Recherche de votre position…</span>
         </div>
       )}
 

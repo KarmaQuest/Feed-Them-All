@@ -131,6 +131,7 @@ function PingPanel({ ping, onBack }: PingPanelProps) {
 
   const [media, setMedia] = useState<PingMedia[]>([])
   const [feedings, setFeedings] = useState<FeedingEvent[]>([])
+  const [feedingsLoading, setFeedingsLoading] = useState(true)
   const [confirming, setConfirming] = useState(false)
   const [confirmDone, setConfirmDone] = useState(false)
   const [showFeedForm, setShowFeedForm] = useState(false)
@@ -147,7 +148,11 @@ function PingPanel({ ping, onBack }: PingPanelProps) {
 
   useEffect(() => {
     getPingMedia(ping.id).then(setMedia).catch(() => {})
-    getPingFeedings(ping.id).then(setFeedings).catch(() => {})
+    setFeedingsLoading(true)
+    getPingFeedings(ping.id)
+      .then(setFeedings)
+      .catch(() => {})
+      .finally(() => setFeedingsLoading(false))
   }, [ping.id])
 
   async function handleConfirm() {
@@ -164,7 +169,11 @@ function PingPanel({ ping, onBack }: PingPanelProps) {
   function onFedDone(updated: Ping) {
     updatePing(updated)
     setShowFeedForm(false)
-    getPingFeedings(ping.id).then(setFeedings).catch(() => {})
+    setFeedingsLoading(true)
+    getPingFeedings(ping.id)
+      .then(setFeedings)
+      .catch(() => {})
+      .finally(() => setFeedingsLoading(false))
   }
 
   async function handleSaveEdit() {
@@ -311,7 +320,9 @@ function PingPanel({ ping, onBack }: PingPanelProps) {
       <div className="msb-activities">
         <h4 className="msb-activities__title">Activités</h4>
 
-        {feedings.length === 0 ? (
+        {feedingsLoading ? (
+          <p className="msb-activities__loading">Chargement…</p>
+        ) : feedings.length === 0 ? (
           <p className="msb-activities__empty">Aucune activité enregistrée.</p>
         ) : (
           <div className="msb-activity-list">

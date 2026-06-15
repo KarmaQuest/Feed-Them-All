@@ -50,7 +50,9 @@ apiClient.interceptors.response.use(
         return apiClient(original)
       } catch {
         setAccessToken(null)
-        window.location.href = '/user-login'
+        // Soft logout — dispatche un event, App.tsx navigue via React Router
+        // sans rechargement complet (évite la boucle deco/reco Firefox)
+        window.dispatchEvent(new CustomEvent('auth:session-expired'))
       }
     }
     return Promise.reject(error)
