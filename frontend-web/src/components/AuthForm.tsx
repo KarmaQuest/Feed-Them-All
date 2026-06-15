@@ -68,6 +68,7 @@ export default function AuthForm({
               <label htmlFor="username">Nom d'utilisateur</label>
               <input
                 id="username"
+                name="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -80,6 +81,7 @@ export default function AuthForm({
             <label htmlFor="email">Email</label>
             <input
               id="email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -91,6 +93,7 @@ export default function AuthForm({
             <label htmlFor="password">Mot de passe</label>
             <input
               id="password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
