@@ -74,6 +74,7 @@ function NavPanel({ onSignal, onLogout }: NavPanelProps) {
             <span className="msb-user-badge__name">{user.username}</span>
             <span className="msb-user-badge__role">{user.role}</span>
           </div>
+          <a href={`/profile`} className="msb-btn msb-btn--secondary">👤 Mon profil</a>
           <button className="msb-btn msb-btn--primary" onClick={onSignal}>
             + Signaler un animal
           </button>

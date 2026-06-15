@@ -108,6 +108,11 @@ func (s *Service) GetProfile(ctx context.Context, userID string) (UserProfile, e
 	return p, nil
 }
 
+// UpdatePrivacy sets the is_private flag for the given user.
+func (s *Service) UpdatePrivacy(ctx context.Context, userID string, isPrivate bool) error {
+	return s.store.UpdatePrivacy(ctx, userID, isPrivate)
+}
+
 // GetLeaderboard returns the top 20 users by XP with ranks and computed levels.
 // Results are cached in memory for 5 minutes to avoid DB load.
 func (s *Service) GetLeaderboard(ctx context.Context) ([]LeaderboardEntry, error) {

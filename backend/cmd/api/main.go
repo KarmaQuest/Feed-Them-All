@@ -161,8 +161,8 @@ func main() {
 	// WebSocket endpoint (optional JWT via ?token=<JWT>)
 	r.Get("/ws", wsHandler.ServeWS)
 
-	// Users & leaderboard (public)
-	r.Get("/users/{id}/profile", usersHandler.GetProfile)
+	// Users & leaderboard (public, optional JWT for private-profile detection)
+	r.With(authSvc.OptionalMiddleware).Get("/users/{id}/profile", usersHandler.GetProfile)
 	r.Get("/leaderboard", usersHandler.GetLeaderboard)
 
 	// Shop catalogue (public)
@@ -175,6 +175,7 @@ func main() {
 		r.Use(authSvc.Middleware)
 		r.Get("/users/me/inventory", shopHandler.GetInventory)
 		r.Post("/shop/items/{id}/purchase", shopHandler.Purchase)
+		r.Patch("/users/me/privacy", usersHandler.UpdatePrivacy)
 	})
 
 	// Admin routes (auth + admin role required)

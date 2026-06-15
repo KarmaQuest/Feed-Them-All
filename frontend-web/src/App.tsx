@@ -6,6 +6,8 @@
 //   /register    -> RegisterPage (inscription, rôle feeder par défaut)
 //   /login       -> LoginPage (connexion admin uniquement)
 //   /admin       -> AdminPage (protégée, rôle admin requis)
+//   /profile     -> ProfilePage (propre profil, JWT requis)
+//   /profile/:id -> ProfilePage (profil public d'un autre utilisateur)
 //   /*           -> Redirige vers /
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
@@ -14,6 +16,7 @@ import UserLoginPage from './pages/UserLoginPage'
 import RegisterPage from './pages/RegisterPage'
 import AdminPage from './pages/admin/AdminPage'
 import MapPage from './pages/MapPage'
+import ProfilePage from './pages/ProfilePage'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuthStore } from './store/auth'
 
@@ -30,6 +33,8 @@ export default function App() {
         <Route path="/user-login" element={<UserLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/:id" element={<ProfilePage />} />
         <Route
           path="/admin"
           element={

@@ -46,6 +46,21 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 	})
 }
 
+// OptionalMiddleware tries to extract a Bearer token if present, but does not block the request if absent.
+// Use for routes that are public but behave differently when authenticated (e.g. private profiles).
+func (s *Service) OptionalMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := r.Header.Get("Authorization")
+		if strings.HasPrefix(header, "Bearer ") {
+			tokenStr := strings.TrimPrefix(header, "Bearer ")
+			if userID, err := s.ValidateAccessToken(tokenStr); err == nil {
+				r = r.WithContext(context.WithValue(r.Context(), ctxKeyUserID, userID))
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // UserIDFromContext extracts the authenticated user ID from context.
 // Returns empty string if not present.
 func UserIDFromContext(ctx context.Context) string {

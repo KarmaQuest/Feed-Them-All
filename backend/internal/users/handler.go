@@ -1,11 +1,9 @@
 // Package users — handler.go expose les routes HTTP du package users.
 //
 // Routes :
-//   GET /users/:id/profile  → profil public d'un utilisateur (public, sans JWT)
-//   GET /leaderboard        → top 20 utilisateurs par XP (public, sans JWT)
-//
-// Les deux routes sont publiques — pas de JWT requis pour consulter un profil
-// ou le classement. C'est cohérent avec le principe de la carte publique.
+//   GET   /users/:id/profile  → profil public (si privé + non-propriétaire → profil réduit)
+//   PATCH /users/me/privacy   → toggle is_private (JWT requis)
+//   GET   /leaderboard        → top 20 utilisateurs par XP (public, sans JWT)
 package users
 
 import (
@@ -15,6 +13,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/KarmaQuest/feed-them-all/internal/auth"
 )
 
 // Handler wires HTTP routes to the users service.
@@ -28,7 +28,7 @@ func NewHandler(svc *Service) *Handler {
 }
 
 // GetProfile handles GET /users/:id/profile.
-// Returns the public profile of the requested user (XP, level, badges, avatar).
+// Returns the full public profile, or a redacted version if the profile is private.
 func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "id")
 	if userID == "" {
@@ -47,7 +47,44 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If the profile is private and the requester is not the owner, return redacted view.
+	if profile.IsPrivate {
+		requesterID := auth.UserIDFromContext(r.Context())
+		if requesterID != userID {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"id":         profile.ID,
+				"username":   profile.Username,
+				"level":      profile.Level,
+				"is_private": true,
+			})
+			return
+		}
+	}
+
 	writeJSON(w, http.StatusOK, profile)
+}
+
+// UpdatePrivacy handles PATCH /users/me/privacy (JWT required).
+// Toggles the is_private flag for the authenticated user.
+func (h *Handler) UpdatePrivacy(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req UpdatePrivacyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid JSON body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.svc.UpdatePrivacy(r.Context(), userID, req.IsPrivate); err != nil {
+		slog.Error("UpdatePrivacy failed", "user_id", userID, "err", err)
+		writeError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // GetLeaderboard handles GET /leaderboard.

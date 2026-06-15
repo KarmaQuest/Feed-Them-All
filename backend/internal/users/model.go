@@ -23,9 +23,17 @@ type UserProfile struct {
 	Username     string                 `json:"username"`
 	Role         string                 `json:"role"`
 	XP           int                    `json:"xp"`
-	Level        int                    `json:"level"`         // computed, not stored in DB
+	Level        int                    `json:"level"`          // computed, not stored in DB
 	Badges       []BadgeSummary         `json:"badges"`
 	AvatarConfig map[string]interface{} `json:"avatar_config"`
+	NbPings      int                    `json:"nb_pings"`       // total active pings created
+	NbFeedings   int                    `json:"nb_feedings"`    // total feeding events recorded
+	IsPrivate    bool                   `json:"is_private"`
+}
+
+// UpdatePrivacyRequest is the body for PATCH /users/me/privacy.
+type UpdatePrivacyRequest struct {
+	IsPrivate bool `json:"is_private"`
 }
 
 // LeaderboardEntry is a single row in the XP leaderboard.

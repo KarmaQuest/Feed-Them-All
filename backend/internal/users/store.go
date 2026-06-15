@@ -23,4 +23,7 @@ type Store interface {
 	// Index 0 = Level 1, Index 1 = Level 2, etc.
 	// Called once at server startup; the service keeps the values in memory.
 	GetLevelThresholds(ctx context.Context) ([]int, error)
+
+	// UpdatePrivacy sets is_private for the given user.
+	UpdatePrivacy(ctx context.Context, userID string, isPrivate bool) error
 }

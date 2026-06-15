@@ -28,10 +28,12 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-// GetProfile fetches a user's public data and badge list.
+// GetProfile fetches a user's public data, badge list, and activity counts.
 const getUserQuery = `
-SELECT id, username, role, xp, avatar_config
-FROM users
+SELECT id, username, role, xp, avatar_config, is_private,
+  (SELECT COUNT(*) FROM pings WHERE created_by = u.id AND is_active = TRUE) AS nb_pings,
+  (SELECT COUNT(*) FROM ping_feeding_events WHERE fed_by = u.id) AS nb_feedings
+FROM users u
 WHERE id = $1`
 
 const getUserBadgesQuery = `
@@ -46,7 +48,7 @@ func (r *Repository) GetProfile(ctx context.Context, userID string) (UserProfile
 	var avatarJSON []byte
 
 	err := r.db.QueryRow(ctx, getUserQuery, userID).
-		Scan(&p.ID, &p.Username, &p.Role, &p.XP, &avatarJSON)
+		Scan(&p.ID, &p.Username, &p.Role, &p.XP, &avatarJSON, &p.IsPrivate, &p.NbPings, &p.NbFeedings)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return UserProfile{}, ErrNotFound
 	}
@@ -146,4 +148,13 @@ func (r *Repository) GetLevelThresholds(ctx context.Context) ([]int, error) {
 		return nil, fmt.Errorf("users.GetLevelThresholds rows: %w", err)
 	}
 	return thresholds, nil
+}
+
+// UpdatePrivacy sets the is_private flag for the given user.
+func (r *Repository) UpdatePrivacy(ctx context.Context, userID string, isPrivate bool) error {
+	_, err := r.db.Exec(ctx, `UPDATE users SET is_private = $2 WHERE id = $1`, userID, isPrivate)
+	if err != nil {
+		return fmt.Errorf("users.UpdatePrivacy: %w", err)
+	}
+	return nil
 }
