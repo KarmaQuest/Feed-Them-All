@@ -1,4 +1,4 @@
-/* =============================================================
+﻿/* =============================================================
    src/styles/components.css — Composants réutilisables
    Classes génériques utilisables dans toute l'app.
    Aucune valeur en dur — tout passe par var() de tokens.css.
@@ -16,7 +16,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: 0.5rem 1rem;
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
   font-size: var(--text-base);
   font-weight: 600;
   border-radius: var(--radius-md);
@@ -156,7 +156,7 @@
   color: var(--text-primary);
   padding: 0.5rem 0.75rem;
   font-size: var(--text-base);
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
   transition: border-color var(--transition);
   box-sizing: border-box;
 }
@@ -329,6 +329,6 @@
   padding: 0.45rem 0.75rem;
   font-size: var(--text-base);
   width: 220px;
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
 }
 .search-input:focus { outline: none; border-color: var(--primary); }

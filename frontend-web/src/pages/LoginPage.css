@@ -1,4 +1,4 @@
-/* src/pages/LoginPage.css — layout de la page de connexion uniquement */
+﻿/* src/pages/LoginPage.css — layout de la page de connexion uniquement */
 
 .login-page {
   min-height: 100vh;
@@ -59,7 +59,7 @@
   font-size: var(--text-md);
   box-sizing: border-box;
   transition: border-color var(--transition);
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
 }
 
 .form-group input:focus {
@@ -79,7 +79,7 @@
   cursor: pointer;
   margin-top: 0.5rem;
   transition: background var(--transition);
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
 }
 
 .btn-primary:hover:not(:disabled) {

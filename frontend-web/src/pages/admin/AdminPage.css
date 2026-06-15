@@ -1,4 +1,4 @@
-/* src/pages/admin/AdminPage.css
+﻿/* src/pages/admin/AdminPage.css
    Layout et composants spécifiques au dashboard admin.
    Aucune couleur en dur — tout passe par les tokens de tokens.css.
 */
@@ -9,7 +9,7 @@
   min-height: 100vh;
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
 }
 
 /* ─── Sidebar ─────────────────────────────────────────────────────────────── */
@@ -266,7 +266,7 @@
   font-size: var(--text-xs);
   cursor: pointer;
   transition: border-color var(--transition), color var(--transition);
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
 }
 
 .btn-page:hover:not(:disabled) {
@@ -355,7 +355,7 @@
   padding: 0.5rem 0.75rem;
   font-size: var(--text-base);
   box-sizing: border-box;
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
 }
 
 .modal-field input:focus,
@@ -422,7 +422,7 @@
   padding: 0.45rem 0.75rem;
   font-size: var(--text-base);
   width: 220px;
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
 }
 
 .search-input:focus {

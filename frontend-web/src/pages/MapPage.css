@@ -1,4 +1,4 @@
-/* src/pages/MapPage.css — Layout de la page carte */
+﻿/* src/pages/MapPage.css — Layout de la page carte */
 
 /* ── Conteneur plein écran ────────────────────────────────────────────────── */
 .map-page {
@@ -251,7 +251,7 @@
 
 .msb-back {
   background: none; border: none; color: var(--text-faint); cursor: pointer;
-  font-size: var(--text-sm); padding: 0; text-align: left; font-family: var(--font-sans);
+  font-size: var(--text-sm); padding: 0; text-align: left; font-family: var(--font-pixel);
   transition: color var(--transition);
 }
 .msb-back:hover { color: var(--primary-lighter); }
@@ -276,7 +276,7 @@
   display: flex; align-items: center; justify-content: center; gap: 0.4rem;
   padding: 0.6rem 1rem; border-radius: var(--radius-md);
   font-size: var(--text-sm); font-weight: 600; cursor: pointer; border: none;
-  font-family: var(--font-sans); transition: background var(--transition), border-color var(--transition);
+  font-family: var(--font-pixel); transition: background var(--transition), border-color var(--transition);
   text-decoration: none; text-align: center;
 }
 .msb-btn--primary { background: var(--primary); color: #fff; }
@@ -353,7 +353,7 @@
   color: var(--text-muted);
   cursor: pointer;
   transition: background var(--transition), border-color var(--transition), color var(--transition);
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
 }
 
 .signal-pos-btn.active {
@@ -445,7 +445,7 @@
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
   transition: background var(--transition);
 }
 
@@ -496,7 +496,7 @@
   color: var(--text-primary);
   padding: 0.25rem 0.4rem;
   font-size: var(--text-xs);
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
 }
 
 .feed-form__textarea {
@@ -507,7 +507,7 @@
   color: var(--text-primary);
   padding: 0.3rem 0.4rem;
   font-size: var(--text-xs);
-  font-family: var(--font-sans);
+  font-family: var(--font-pixel);
   resize: vertical;
   min-height: 52px;
   box-sizing: border-box;
