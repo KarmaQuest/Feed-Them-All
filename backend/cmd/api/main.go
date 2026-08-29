@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/KarmaQuest/feed-them-all/internal/admin"
+	"github.com/KarmaQuest/feed-them-all/internal/animals"
 	"github.com/KarmaQuest/feed-them-all/internal/auth"
 	"github.com/KarmaQuest/feed-them-all/internal/config"
 	"github.com/KarmaQuest/feed-them-all/internal/gamification"
@@ -98,8 +99,10 @@ func main() {
 	adminRepo := admin.NewRepository(db)
 	adminSvc := admin.NewService(adminRepo)
 	adminSvc.SetThresholdReloader(usersSvc) // reload thresholds in memory after admin update
+	adminSvc.SetSpritesDir(cfg.SpritesDir)  // sprite file operations
 	adminHandler := admin.NewHandler(adminSvc)
 	adminMW := admin.NewMiddleware(db)
+	animalsHandler := animals.NewHandler(cfg.SpritesDir)
 
 	// --- Wire up WebSocket handler ---
 	wsHandler := ws.NewHandler(hub, cfg.JWTSecret)
@@ -158,6 +161,8 @@ func main() {
 	r.Get("/pings/{id}/media", pingsHandler.ListMedia)
 	r.Get("/pings/{id}/reports", pingsHandler.ListReports)
 	r.Get("/pings/{id}/feedings", pingsHandler.ListFeedingEvents)
+	// Animal breeds listing (public)
+	r.Get("/animals/breeds", animalsHandler)
 	// WebSocket endpoint (optional JWT via ?token=<JWT>)
 	r.Get("/ws", wsHandler.ServeWS)
 
@@ -176,6 +181,7 @@ func main() {
 		r.Get("/users/me/inventory", shopHandler.GetInventory)
 		r.Post("/shop/items/{id}/purchase", shopHandler.Purchase)
 		r.Patch("/users/me/privacy", usersHandler.UpdatePrivacy)
+		r.Patch("/users/me/avatar", usersHandler.UpdateAvatar)
 	})
 
 	// Admin routes (auth + admin role required)
@@ -226,10 +232,19 @@ func main() {
 		// Feeding events moderation
 		r.Patch("/admin/feedings/{id}", adminHandler.UpdateFeedingEvent)
 		r.Delete("/admin/feedings/{id}", adminHandler.DeleteFeedingEvent)
+
+		// Sprites management
+		r.Get("/admin/sprites", adminHandler.ListSprites)
+		r.Post("/admin/sprites/upload", adminHandler.UploadSprite)
+		r.Delete("/admin/sprites", adminHandler.DeleteSprite)
+		r.Post("/admin/shop-items/{id}/sprite", adminHandler.UploadShopItemSprite)
 	})
 
 	// Serve uploaded files
 	r.Handle("/uploads/*", http.StripPrefix("/uploads", http.FileServer(http.Dir(cfg.UploadDir))))
+
+	// Serve sprites (default + shop uploads)
+	r.Handle("/sprites/*", http.StripPrefix("/sprites", http.FileServer(http.Dir(cfg.SpritesDir))))
 
 	// --- Start server ---
 	srv := &http.Server{

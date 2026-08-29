@@ -25,7 +25,7 @@ func TestRegister_Success(t *testing.T) {
 		Email:    "alice@fta.dev",
 		Username: "Alice",
 		Password: "strongPass1",
-		Role:     "feeder",
+		Roles:    []string{"feeder"},
 	})
 
 	if err != nil {
@@ -52,7 +52,7 @@ func TestRegister_DefaultRole(t *testing.T) {
 		Email:    "bob@fta.dev",
 		Username: "Bob",
 		Password: "strongPass1",
-		Role:     "", // empty → should default to feeder
+		Roles:    []string{}, // empty → should default to feeder
 	})
 
 	if err != nil {
@@ -84,7 +84,7 @@ func TestRegister_InvalidRole(t *testing.T) {
 		Email:    "bad@fta.dev",
 		Username: "BadRole",
 		Password: "strongPass1",
-		Role:     "admin", // invalid
+		Roles:    []string{"admin"}, // invalid
 	})
 
 	if err != ErrInvalidRole {
@@ -99,7 +99,7 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 		Email:    "dup@fta.dev",
 		Username: "First",
 		Password: "strongPass1",
-		Role:     "feeder",
+		Roles:    []string{"feeder"},
 	}
 	if _, _, err := svc.Register(context.Background(), req); err != nil {
 		t.Fatalf("first register failed: %v", err)
@@ -119,7 +119,7 @@ func TestRegister_DuplicateUsername(t *testing.T) {
 		Email:    "first@fta.dev",
 		Username: "SharedName",
 		Password: "strongPass1",
-		Role:     "feeder",
+		Roles:    []string{"feeder"},
 	}
 	if _, _, err := svc.Register(context.Background(), req); err != nil {
 		t.Fatalf("first register failed: %v", err)
@@ -142,7 +142,7 @@ func TestLogin_Success(t *testing.T) {
 		Email:    "login@fta.dev",
 		Username: "LoginUser",
 		Password: "correctPass1",
-		Role:     "giver",
+		Roles:    []string{"giver"},
 	}); err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 		Email:    "pw@fta.dev",
 		Username: "PwUser",
 		Password: "correctPass1",
-		Role:     "feeder",
+		Roles:    []string{"feeder"},
 	}); err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestRefresh_Success(t *testing.T) {
 		Email:    "refresh@fta.dev",
 		Username: "RefreshUser",
 		Password: "refreshPass1",
-		Role:     "feeder",
+		Roles:    []string{"feeder"},
 	}); err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestLogout_ClearsRefreshToken(t *testing.T) {
 		Email:    "logout@fta.dev",
 		Username: "LogoutUser",
 		Password: "logoutPass1",
-		Role:     "feeder",
+		Roles:    []string{"feeder"},
 	}); err != nil {
 		t.Fatalf("register failed: %v", err)
 	}

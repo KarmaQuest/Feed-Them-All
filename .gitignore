@@ -4,6 +4,8 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 backend/feedthemall
 backend/feedthemall.exe
+backend/api.exe
+*.log
 
 # Frontend
 frontend-web/node_modules/

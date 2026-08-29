@@ -26,7 +26,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -71,6 +74,12 @@ type adminService interface {
 	CreateFeedingEventAdmin(ctx context.Context, pingID, fedBy string, req CreateFeedingEventAdminRequest) (AdminFeedingEvent, error)
 	UpdateFeedingEvent(ctx context.Context, eventID string, req UpdateFeedingEventRequest) error
 	DeleteFeedingEvent(ctx context.Context, eventID string) error
+
+	// ── Sprites ────────────────────────────────────────────────────────────────
+	ListSprites(ctx context.Context) ([]SpriteEntry, error)
+	UploadSprite(ctx context.Context, filePath, destDir string, destName ...string) (UploadSpriteResponse, error)
+	DeleteSprite(ctx context.Context, fullPath string) error
+	UploadShopItemSprite(ctx context.Context, itemSlug string, filePath string) (UploadSpriteResponse, error)
 }
 
 // Handler holds HTTP handlers for admin routes.
@@ -512,6 +521,168 @@ func (h *Handler) CreateXPAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
+}
+
+// ─── Sprites ───────────────────────────────────────────────────────────────────
+
+// ListSprites handles GET /admin/sprites
+func (h *Handler) ListSprites(w http.ResponseWriter, r *http.Request) {
+	entries, err := h.svc.ListSprites(r.Context())
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, entries, http.StatusOK)
+}
+
+// UploadSprite handles POST /admin/sprites/upload
+// Expects multipart/form-data with fields: file (the PNG), path (destination relative dir).
+func (h *Handler) UploadSprite(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20) // 10 MB limit
+	if err := r.ParseMultipartForm(32 << 20); err != nil { // 32 MB memory
+		writeError(w, "failed to parse multipart form", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, "missing file field", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	if err := validateSpriteFile(file, header); err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	destDir := r.FormValue("path")
+	if destDir == "" {
+		writeError(w, "missing path field", http.StatusBadRequest)
+		return
+	}
+
+	destName := r.FormValue("filename") // optional — if empty, preserve original name
+
+	// Save to temp file so the service can move it.
+	tmpFile, err := os.CreateTemp("", "sprite-*.png")
+	if err != nil {
+		writeError(w, "failed to create temp file", http.StatusInternalServerError)
+		return
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+
+	if _, err := io.Copy(tmpFile, file); err != nil {
+		tmpFile.Close()
+		writeError(w, "failed to save temp file", http.StatusInternalServerError)
+		return
+	}
+	tmpFile.Close()
+
+	resp, err := h.svc.UploadSprite(r.Context(), tmpPath, destDir, destName)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, resp, http.StatusCreated)
+}
+
+// DeleteSprite handles DELETE /admin/sprites?path=relative/path/to/file.png
+func (h *Handler) DeleteSprite(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		writeError(w, "missing path query param", http.StatusBadRequest)
+		return
+	}
+	if err := h.svc.DeleteSprite(r.Context(), path); err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// UploadShopItemSprite handles POST /admin/shop-items/{id}/sprite
+// Expects multipart/form-data with field: file (the PNG).
+func (h *Handler) UploadShopItemSprite(w http.ResponseWriter, r *http.Request) {
+	itemID := chi.URLParam(r, "id")
+
+	// Resolve slug from shop item ID.
+	items, err := h.svc.ListShopItems(r.Context())
+	if err != nil {
+		writeError(w, "failed to list shop items", http.StatusInternalServerError)
+		return
+	}
+	var slug string
+	for _, item := range items {
+		if item.ID == itemID {
+			slug = item.Slug
+			break
+		}
+	}
+	if slug == "" {
+		writeError(w, "shop item not found", http.StatusNotFound)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		writeError(w, "failed to parse multipart form", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, "missing file field", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	if err := validateSpriteFile(file, header); err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	tmpFile, err := os.CreateTemp("", "sprite-*.png")
+	if err != nil {
+		writeError(w, "failed to create temp file", http.StatusInternalServerError)
+		return
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+
+	if _, err := io.Copy(tmpFile, file); err != nil {
+		tmpFile.Close()
+		writeError(w, "failed to save temp file", http.StatusInternalServerError)
+		return
+	}
+	tmpFile.Close()
+
+	resp, err := h.svc.UploadShopItemSprite(r.Context(), slug, tmpPath)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, resp, http.StatusCreated)
+}
+
+// validateSpriteFile checks MIME type and size.
+func validateSpriteFile(file multipart.File, header *multipart.FileHeader) error {
+	if header.Size > 5*1024*1024 {
+		return errors.New("file too large: max 5 MB")
+	}
+	buf := make([]byte, 8)
+	if _, err := file.Read(buf); err != nil {
+		return err
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	// PNG magic bytes
+	if len(buf) < 8 || buf[0] != 0x89 || buf[1] != 'P' || buf[2] != 'N' || buf[3] != 'G' {
+		return errors.New("only PNG files are accepted")
+	}
+	return nil
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────

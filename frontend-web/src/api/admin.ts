@@ -91,21 +91,24 @@ export interface AdminFeedingEvent {
 export const listUsers = (page = 1, search = '') =>
   apiClient
     .get<AdminUser[]>(`/admin/users?page=${page}&search=${encodeURIComponent(search)}`)
-    .then((r) => r.data)
+    .then(r => r.data)
 
 export const updateUser = (id: string, body: { role?: string; is_banned?: boolean }) =>
   apiClient.patch(`/admin/users/${id}`, body)
 
-export const createUser = (body: { email: string; username: string; password: string; role: string }) =>
-  apiClient.post<{ id: string }>('/admin/users', body).then((r) => r.data)
+export const createUser = (body: {
+  email: string
+  username: string
+  password: string
+  role: string
+}) => apiClient.post<{ id: string }>('/admin/users', body).then(r => r.data)
 
-export const deleteUser = (id: string) =>
-  apiClient.delete(`/admin/users/${id}`)
+export const deleteUser = (id: string) => apiClient.delete(`/admin/users/${id}`)
 
 // ─── XP Actions ───────────────────────────────────────────────────────────────
 
 export const listXPActions = () =>
-  apiClient.get<AdminXPAction[]>('/admin/xp-actions').then((r) => r.data)
+  apiClient.get<AdminXPAction[]>('/admin/xp-actions').then(r => r.data)
 
 export const updateXPAction = (action: string, body: { xp_value?: number; daily_limit?: number }) =>
   apiClient.put(`/admin/xp-actions/${action}`, body)
@@ -116,38 +119,35 @@ export const createXPAction = (body: { action: string; xp_value: number; daily_l
 // ─── Level Thresholds ─────────────────────────────────────────────────────────
 
 export const listThresholds = () =>
-  apiClient.get<LevelThreshold[]>('/admin/level-thresholds').then((r) => r.data)
+  apiClient.get<LevelThreshold[]>('/admin/level-thresholds').then(r => r.data)
 
 export const replaceThresholds = (thresholds: LevelThreshold[]) =>
   apiClient.put('/admin/level-thresholds', { thresholds })
 
 // ─── Badges ───────────────────────────────────────────────────────────────────
 
-export const listBadges = () =>
-  apiClient.get<AdminBadge[]>('/admin/badges').then((r) => r.data)
+export const listBadges = () => apiClient.get<AdminBadge[]>('/admin/badges').then(r => r.data)
 
 export const createBadge = (body: Omit<AdminBadge, 'id'>) =>
-  apiClient.post<{ id: string }>('/admin/badges', body).then((r) => r.data)
+  apiClient.post<{ id: string }>('/admin/badges', body).then(r => r.data)
 
 export const updateBadge = (id: string, body: Omit<AdminBadge, 'id'>) =>
   apiClient.put(`/admin/badges/${id}`, body)
 
-export const deleteBadge = (id: string) =>
-  apiClient.delete(`/admin/badges/${id}`)
+export const deleteBadge = (id: string) => apiClient.delete(`/admin/badges/${id}`)
 
 // ─── Shop Items ───────────────────────────────────────────────────────────────
 
 export const listShopItems = () =>
-  apiClient.get<AdminShopItem[]>('/admin/shop-items').then((r) => r.data)
+  apiClient.get<AdminShopItem[]>('/admin/shop-items').then(r => r.data)
 
 export const createShopItem = (body: Omit<AdminShopItem, 'id'>) =>
-  apiClient.post<{ id: string }>('/admin/shop-items', body).then((r) => r.data)
+  apiClient.post<{ id: string }>('/admin/shop-items', body).then(r => r.data)
 
 export const updateShopItem = (id: string, body: Omit<AdminShopItem, 'id'>) =>
   apiClient.put(`/admin/shop-items/${id}`, body)
 
-export const deleteShopItem = (id: string) =>
-  apiClient.delete(`/admin/shop-items/${id}`)
+export const deleteShopItem = (id: string) => apiClient.delete(`/admin/shop-items/${id}`)
 
 // ─── Pings ────────────────────────────────────────────────────────────────────
 
@@ -155,42 +155,96 @@ export const listPingsAdmin = (params: { active?: boolean; flagged?: boolean } =
   const q = new URLSearchParams()
   if (params.active !== undefined) q.set('active', String(params.active))
   if (params.flagged !== undefined) q.set('flagged', String(params.flagged))
-  return apiClient.get<AdminPing[]>(`/admin/pings?${q}`).then((r) => r.data)
+  return apiClient.get<AdminPing[]>(`/admin/pings?${q}`).then(r => r.data)
 }
 
-export const forceDeactivatePing = (id: string) =>
-  apiClient.delete(`/admin/pings/${id}`)
+export const forceDeactivatePing = (id: string) => apiClient.delete(`/admin/pings/${id}`)
 
-export const createPingAdmin = (body: { user_id: string; type: string; lat: number; lon: number; animal_type?: string; animal_count?: number }) =>
-  apiClient.post<{ id: string }>('/admin/pings', body).then((r) => r.data)
+export const createPingAdmin = (body: {
+  user_id: string
+  type: string
+  lat: number
+  lon: number
+  animal_type?: string
+  animal_count?: number
+}) => apiClient.post<{ id: string }>('/admin/pings', body).then(r => r.data)
 
 export const getPingFeedingEvents = (pingId: string) =>
-  apiClient.get<FeedingEvent[]>(`/pings/${pingId}/feedings`).then((r) => r.data)
+  apiClient.get<FeedingEvent[]>(`/pings/${pingId}/feedings`).then(r => r.data)
 
 // ─── Comments (admin moderation) ─────────────────────────────────────────────
 
 export const listCommentsAdmin = (pingId: string) =>
-  apiClient.get<AdminComment[]>(`/admin/pings/${pingId}/comments`).then((r) => r.data)
+  apiClient.get<AdminComment[]>(`/admin/pings/${pingId}/comments`).then(r => r.data)
 
 export const createComment = (pingId: string, content: string) =>
-  apiClient.post<AdminComment>(`/admin/pings/${pingId}/comments`, { content }).then((r) => r.data)
+  apiClient.post<AdminComment>(`/admin/pings/${pingId}/comments`, { content }).then(r => r.data)
 
 export const updateComment = (id: string, content: string) =>
   apiClient.patch(`/admin/comments/${id}`, { content })
 
-export const deleteComment = (id: string) =>
-  apiClient.delete(`/admin/comments/${id}`)
+export const deleteComment = (id: string) => apiClient.delete(`/admin/comments/${id}`)
 
 // ─── Feeding Events (admin moderation) ───────────────────────────────────────
 
 export const listFeedingEventsAdmin = (pingId: string) =>
-  apiClient.get<AdminFeedingEvent[]>(`/admin/pings/${pingId}/feedings`).then((r) => r.data)
+  apiClient.get<AdminFeedingEvent[]>(`/admin/pings/${pingId}/feedings`).then(r => r.data)
 
-export const createFeedingEventAdmin = (pingId: string, body: { note?: string | null; animal_count_seen?: number | null }) =>
-  apiClient.post<AdminFeedingEvent>(`/admin/pings/${pingId}/feedings`, body).then((r) => r.data)
+export const createFeedingEventAdmin = (
+  pingId: string,
+  body: { note?: string | null; animal_count_seen?: number | null }
+) => apiClient.post<AdminFeedingEvent>(`/admin/pings/${pingId}/feedings`, body).then(r => r.data)
 
-export const updateFeedingEvent = (id: string, body: { note?: string | null; animal_count_seen?: number | null }) =>
-  apiClient.patch(`/admin/feedings/${id}`, body)
+export const updateFeedingEvent = (
+  id: string,
+  body: { note?: string | null; animal_count_seen?: number | null }
+) => apiClient.patch(`/admin/feedings/${id}`, body)
 
-export const deleteFeedingEvent = (id: string) =>
-  apiClient.delete(`/admin/feedings/${id}`)
+export const deleteFeedingEvent = (id: string) => apiClient.delete(`/admin/feedings/${id}`)
+
+// ─── Sprites ──────────────────────────────────────────────────────────────────
+
+export interface SpriteEntry {
+  name: string
+  is_dir: boolean
+  size: number
+  path: string
+  children?: SpriteEntry[]
+}
+
+export interface UploadSpriteResponse {
+  path: string
+  size: number
+}
+
+export const listSprites = () =>
+  apiClient.get<SpriteEntry[]>('/admin/sprites').then(r => r.data)
+
+export const uploadSprite = (file: File, path: string) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('path', path)
+  return apiClient.post<UploadSpriteResponse>('/admin/sprites/upload', fd).then(r => r.data)
+}
+
+export const deleteSprite = (path: string) =>
+  apiClient.delete(`/admin/sprites?path=${encodeURIComponent(path)}`)
+
+export const uploadShopItemSprite = (itemId: string, file: File) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return apiClient
+    .post<UploadSpriteResponse>(`/admin/shop-items/${itemId}/sprite`, fd)
+    .then(r => r.data)
+}
+
+/** Upload a sprite directly to a shop slug (for item creation, no item ID yet). */
+export const uploadShopSprite = (slug: string, file: File) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('path', `shop/${slug}`)
+  fd.append('filename', 'south.png')
+  return apiClient
+    .post<UploadSpriteResponse>('/admin/sprites/upload', fd)
+    .then(r => r.data)
+}

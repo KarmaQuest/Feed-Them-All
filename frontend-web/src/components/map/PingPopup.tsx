@@ -29,7 +29,7 @@ const ANIMAL_LABELS: Record<string, string> = {
 
 export default function PingPopup({ ping }: Props) {
   const { user } = useAuthStore()
-  const updatePing = useMapStore((s) => s.updatePing)
+  const updatePing = useMapStore(s => s.updatePing)
 
   const [media, setMedia] = useState<PingMedia[]>([])
   const [feedings, setFeedings] = useState<FeedingEvent[]>([])
@@ -37,8 +37,12 @@ export default function PingPopup({ ping }: Props) {
   const [showFeedForm, setShowFeedForm] = useState(false)
 
   useEffect(() => {
-    getPingMedia(ping.id).then(setMedia).catch(() => {})
-    getPingFeedings(ping.id).then(setFeedings).catch(() => {})
+    getPingMedia(ping.id)
+      .then(setMedia)
+      .catch(() => {})
+    getPingFeedings(ping.id)
+      .then(setFeedings)
+      .catch(() => {})
   }, [ping.id])
 
   async function handleConfirm() {
@@ -54,7 +58,9 @@ export default function PingPopup({ ping }: Props) {
   function onFeedDone(updatedPing: Ping) {
     updatePing(updatedPing)
     setShowFeedForm(false)
-    getPingFeedings(ping.id).then(setFeedings).catch(() => {})
+    getPingFeedings(ping.id)
+      .then(setFeedings)
+      .catch(() => {})
   }
 
   const lastFed = feedings[0]
@@ -67,7 +73,7 @@ export default function PingPopup({ ping }: Props) {
         <div className="ping-popup__header">
           <span className={`ping-popup__type ping-popup__type--${ping.type}`}>
             {isAnimal
-              ? ANIMAL_LABELS[ping.animal_type ?? 'other'] ?? 'Animal'
+              ? (ANIMAL_LABELS[ping.animal_type ?? 'other'] ?? 'Animal')
               : 'Nourriture disponible'}
           </span>
           {isAnimal && ping.animal_count > 1 && (
@@ -99,21 +105,14 @@ export default function PingPopup({ ping }: Props) {
             {lastFed.note && <span className="ping-popup__note"> — «{lastFed.note}»</span>}
           </p>
         ) : (
-          <p className="ping-popup__fed ping-popup__fed--none">
-            Pas encore nourri
-          </p>
+          <p className="ping-popup__fed ping-popup__fed--none">Pas encore nourri</p>
         )}
 
         {/* Photos */}
         {media.length > 0 && (
           <div className="ping-popup__media">
-            {media.slice(0, 3).map((m) => (
-              <img
-                key={m.id}
-                src={`/api${m.url}`}
-                alt="Photo ping"
-                className="ping-popup__photo"
-              />
+            {media.slice(0, 3).map(m => (
+              <img key={m.id} src={`/api${m.url}`} alt="Photo ping" className="ping-popup__photo" />
             ))}
           </div>
         )}
@@ -141,11 +140,7 @@ export default function PingPopup({ ping }: Props) {
 
         {/* Formulaire nourrissage inline */}
         {showFeedForm && (
-          <FeedForm
-            ping={ping}
-            onDone={onFeedDone}
-            onCancel={() => setShowFeedForm(false)}
-          />
+          <FeedForm ping={ping} onDone={onFeedDone} onCancel={() => setShowFeedForm(false)} />
         )}
       </div>
     </Popup>

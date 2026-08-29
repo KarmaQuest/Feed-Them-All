@@ -14,7 +14,9 @@
 @import './styles/utilities.css';
 
 /* ── Reset global ───────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -24,12 +26,12 @@
    Press Start 2P est visuellement 2× plus grande que les polices système.
    Réduire la base compense cet effet sans changer tous les rem. */
 html {
-  font-size: 62.5%;
+  font-size: 75%;
 }
 
 body {
   font-family: var(--font-pixel);
-  font-size: 1.4rem; /* ~14px */
+  font-size: var(--text-md);
   background: var(--bg-base);
   color: var(--text-primary);
   line-height: 1.8;
@@ -38,10 +40,16 @@ body {
   font-smooth: never;
 }
 
-a { color: inherit; text-decoration: none; }
-button { font-family: inherit; }
-input, select, textarea {
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  font-family: inherit;
+}
+input,
+select,
+textarea {
   font-family: inherit;
   color-scheme: dark;
 }
-

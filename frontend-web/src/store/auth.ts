@@ -12,6 +12,8 @@ export interface AuthUser {
   id: string
   username: string
   role: string
+  roles: string[]
+  avatar_config?: Record<string, unknown>
 }
 
 interface AuthStore {
@@ -23,12 +25,12 @@ interface AuthStore {
   initialize: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
+export const useAuthStore = create<AuthStore>(set => ({
   user: null,
   isLogged: false,
   initialized: false,
 
-  login: (user) => set({ user, isLogged: true }),
+  login: user => set({ user, isLogged: true }),
 
   logout: () => {
     setAccessToken(null)
@@ -40,15 +42,17 @@ export const useAuthStore = create<AuthStore>((set) => ({
   // Le backend retourne access_token + user → aucun localStorage nécessaire.
   initialize: async () => {
     try {
-      const res = await axios.post(
-        '/api/auth/refresh',
-        {},
-        { withCredentials: true },
-      )
+      const res = await axios.post('/api/auth/refresh', {}, { withCredentials: true })
       setAccessToken(res.data.access_token)
       const u = res.data.user
       set({
-        user: { id: u.id, username: u.username, role: u.role },
+        user: {
+          id: u.id,
+          username: u.username,
+          role: u.role,
+          roles: u.roles ?? [u.role],
+          avatar_config: u.avatar_config ?? {},
+        },
         isLogged: true,
         initialized: true,
       })

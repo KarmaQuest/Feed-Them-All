@@ -34,11 +34,13 @@ type User struct {
 // RegisterRequest is the payload for POST /auth/register.
 // Roles is the list of selected roles; valid non-admin values: feeder, giver, association.
 // Rules: association is exclusive; feeder and giver can be combined.
+// AvatarConfig is optional and stores initial cosmetic preferences (e.g. gender).
 type RegisterRequest struct {
-	Email    string   `json:"email"`
-	Username string   `json:"username"`
-	Password string   `json:"password"`
-	Roles    []string `json:"roles"` // ["feeder"], ["giver"], ["feeder","giver"], ["association"]
+	Email        string                 `json:"email"`
+	Username     string                 `json:"username"`
+	Password     string                 `json:"password"`
+	Roles        []string               `json:"roles"`         // ["feeder"], ["giver"], ["feeder","giver"], ["association"]
+	AvatarConfig map[string]interface{} `json:"avatar_config"` // optional: { "gender": "male"|"female"|"other" }
 }
 
 // LoginRequest is the payload for POST /auth/login.

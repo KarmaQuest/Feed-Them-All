@@ -3,12 +3,14 @@
 // Affiche la carte plein écran avec :
 //   - MapView (Leaflet + marqueurs + WS)
 //   - Bouton FAB flottant (logo, haut droite) pour ouvrir la sidebar
-//   - MapSidebar slideout droite (nav / signal / ping detail)
+//   - MapSidebar slideout droite (nav / ping detail)
+//   - SignalForm en modal centré (33vw)
 //   - Bandeau pick-mode (clic pour placer un marqueur)
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import MapView from '../components/map/MapView'
 import MapSidebar from '../components/map/MapSidebar'
+import SignalForm from '../components/map/SignalForm'
 import { useGeolocation } from '../hooks/useGeolocation'
 import { useMapStore } from '../store/map'
 import { useAuthStore } from '../store/auth'
@@ -23,20 +25,37 @@ export default function MapPage() {
   const navigate = useNavigate()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [signalModalOpen, setSignalModalOpen] = useState(false)
+  const location = useLocation()
+
+  useEffect(() => {
+    if ((location.state as { fromMap?: boolean })?.fromMap) {
+      setSidebarOpen(true)
+    }
+  }, [location.state])
   const [pickMode, setPickMode] = useState(false)
   const [pickedLat, setPickedLat] = useState<number | null>(null)
   const [pickedLon, setPickedLon] = useState<number | null>(null)
+  // Track if SignalForm has ever been opened (keep mounted for state preservation)
+  const [signalEverOpened, setSignalEverOpened] = useState(false)
+
+  function handleOpenSignalModal() {
+    setSidebarOpen(false)
+    setSignalEverOpened(true)
+    setTimeout(() => setSignalModalOpen(true), 300)
+  }
 
   function handleRequestMapPick() {
     setPickMode(true)
-    setSidebarOpen(false)
+    setSignalModalOpen(false) // hide modal, don't unmount
   }
 
   function handleMapPick(lat: number, lon: number) {
     setPickedLat(lat)
     setPickedLon(lon)
     setPickMode(false)
-    setSidebarOpen(true)
+    // Re-show signal modal after picking
+    setTimeout(() => setSignalModalOpen(true), 100)
   }
 
   function handleMarkerClick(pingId: string) {
@@ -45,13 +64,28 @@ export default function MapPage() {
   }
 
   async function handleLogout() {
-    try { await logout() } catch { /* ignore */ }
+    try {
+      await logout()
+    } catch {
+      /* ignore */
+    }
     logoutStore()
     navigate('/')
   }
 
-  function onPingCreated(ping: Ping) {
+  function handlePingCreated(ping: Ping) {
     addPing(ping)
+    setSignalModalOpen(false)
+    setSignalEverOpened(false)
+    setPickedLat(null)
+    setPickedLon(null)
+    setSelectedPing(ping.id)
+    setSidebarOpen(true)
+  }
+
+  function handleSignalCancel() {
+    setSignalModalOpen(false)
+    setSignalEverOpened(false)
     setPickedLat(null)
     setPickedLon(null)
   }
@@ -60,14 +94,11 @@ export default function MapPage() {
     <div className="map-page">
       {/* Carte plein écran */}
       <div className={`map-container${pickMode ? ' map-container--pick' : ''}`}>
-        <MapView
-          onMapPick={pickMode ? handleMapPick : null}
-          onMarkerClick={handleMarkerClick}
-        />
+        <MapView onMapPick={pickMode ? handleMapPick : null} onMarkerClick={handleMarkerClick} />
       </div>
 
       {/* Bouton FAB — logo flottant en haut à droite pour ouvrir la sidebar */}
-      {!sidebarOpen && (
+      {!sidebarOpen && !signalModalOpen && (
         <button
           className="map-fab"
           onClick={() => setSidebarOpen(true)}
@@ -86,11 +117,7 @@ export default function MapPage() {
       )}
 
       {/* Toast géolocalisation */}
-      {geoError && (
-        <div className="map-toast map-toast--warning">
-          📍 {geoError}
-        </div>
-      )}
+      {geoError && <div className="map-toast map-toast--warning">📍 {geoError}</div>}
 
       {/* Bandeau mode pick */}
       {pickMode && (
@@ -98,10 +125,26 @@ export default function MapPage() {
           🗺 Cliquez sur la carte pour placer le marqueur
           <button
             className="map-pick-hint__cancel"
-            onClick={() => { setPickMode(false); setSidebarOpen(true) }}
+            onClick={() => {
+              setPickMode(false)
+              setSignalModalOpen(true)
+            }}
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* SignalForm modal centré — toujours monté une fois ouvert, caché via CSS */}
+      {signalEverOpened && (
+        <div className={`signal-modal-wrapper${signalModalOpen ? '' : ' signal-modal-wrapper--hidden'}`}>
+          <SignalForm
+            onDone={handlePingCreated}
+            onCancel={handleSignalCancel}
+            onRequestMapPick={handleRequestMapPick}
+            pickedLat={pickedLat}
+            pickedLon={pickedLon}
+          />
         </div>
       )}
 
@@ -109,11 +152,7 @@ export default function MapPage() {
       <MapSidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        pickMode={pickMode}
-        pickedLat={pickedLat}
-        pickedLon={pickedLon}
-        onRequestMapPick={handleRequestMapPick}
-        onPingCreated={onPingCreated}
+        onOpenSignalModal={handleOpenSignalModal}
         onLogout={handleLogout}
       />
     </div>

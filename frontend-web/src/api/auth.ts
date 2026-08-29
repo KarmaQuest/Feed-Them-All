@@ -9,6 +9,7 @@ export interface AuthResponse {
     username: string
     role: string
     roles: string[]
+    avatar_config?: Record<string, unknown>
   }
 }
 
@@ -26,8 +27,15 @@ export async function register(
   email: string,
   password: string,
   roles: string[] = ['feeder'],
+  avatarConfig?: Record<string, unknown>
 ): Promise<AuthResponse> {
-  const res = await apiClient.post<AuthResponse>('/auth/register', { username, email, password, roles })
+  const res = await apiClient.post<AuthResponse>('/auth/register', {
+    username,
+    email,
+    password,
+    roles,
+    avatar_config: avatarConfig,
+  })
   setAccessToken(res.data.access_token)
   return res.data
 }

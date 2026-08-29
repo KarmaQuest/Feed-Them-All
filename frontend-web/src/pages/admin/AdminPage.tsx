@@ -12,12 +12,14 @@ import LevelsSection from './sections/LevelsSection'
 import BadgesSection from './sections/BadgesSection'
 import ShopSection from './sections/ShopSection'
 import ModerationSection from './sections/ModerationSection'
+import SpritesSection from './sections/SpritesSection'
 import './AdminPage.css'
 
-type Section = 'users' | 'xp' | 'levels' | 'badges' | 'shop' | 'moderation'
+type Section = 'users' | 'xp' | 'levels' | 'badges' | 'shop' | 'moderation' | 'sprites'
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'users', label: 'Utilisateurs', icon: '👥' },
+  { id: 'sprites', label: 'Sprites', icon: '🎨' },
   { id: 'xp', label: 'Actions XP', icon: '⚡' },
   { id: 'levels', label: 'Paliers de Level', icon: '📊' },
   { id: 'badges', label: 'Badges', icon: '🏅' },
@@ -31,19 +33,31 @@ export default function AdminPage() {
   const { user, logout: logoutStore } = useAuthStore()
 
   async function handleLogout() {
-    try { await logout() } catch { /* ignore */ }
+    try {
+      await logout()
+    } catch {
+      /* ignore */
+    }
     logoutStore()
     navigate('/login')
   }
 
   function renderSection() {
     switch (active) {
-      case 'users': return <UsersSection />
-      case 'xp': return <XPSection />
-      case 'levels': return <LevelsSection />
-      case 'badges': return <BadgesSection />
-      case 'shop': return <ShopSection />
-      case 'moderation': return <ModerationSection />
+      case 'users':
+        return <UsersSection />
+      case 'xp':
+        return <XPSection />
+      case 'levels':
+        return <LevelsSection />
+      case 'badges':
+        return <BadgesSection />
+      case 'shop':
+        return <ShopSection />
+      case 'moderation':
+        return <ModerationSection />
+      case 'sprites':
+        return <SpritesSection />
     }
   }
 
@@ -51,11 +65,15 @@ export default function AdminPage() {
     <div className="admin-layout">
       <aside className="admin-sidebar">
         <div className="sidebar-logo">
-          <img src="/logo.png" alt="FeedThemAll" style={{ width: '72px', height: '72px', objectFit: 'contain' }} />
+          <img
+            src="/logo.png"
+            alt="FeedThemAll"
+            style={{ width: '72px', height: '72px', objectFit: 'contain' }}
+          />
           <span>Admin Dashboard</span>
         </div>
         <nav className="sidebar-nav">
-          {NAV.map((n) => (
+          {NAV.map(n => (
             <button
               key={n.id}
               className={`nav-item ${active === n.id ? 'active' : ''}`}
@@ -68,12 +86,12 @@ export default function AdminPage() {
         </nav>
         <div className="sidebar-footer">
           <span>{user?.username}</span>
-          <button className="btn-logout" onClick={handleLogout}>Déconnexion</button>
+          <button className="btn btn--style-red" onClick={handleLogout}>
+            Déconnexion
+          </button>
         </div>
       </aside>
-      <main className="admin-main">
-        {renderSection()}
-      </main>
+      <main className="admin-main">{renderSection()}</main>
     </div>
   )
 }

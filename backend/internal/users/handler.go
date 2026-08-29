@@ -65,7 +65,6 @@ func (h *Handler) GetProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdatePrivacy handles PATCH /users/me/privacy (JWT required).
-// Toggles the is_private flag for the authenticated user.
 func (h *Handler) UpdatePrivacy(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserIDFromContext(r.Context())
 	if userID == "" {
@@ -87,8 +86,33 @@ func (h *Handler) UpdatePrivacy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// UpdateAvatar handles PATCH /users/me/avatar (JWT required).
+// Replaces the avatar_config JSONB for the authenticated user.
+func (h *Handler) UpdateAvatar(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	if userID == "" {
+		writeError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req AvatarConfigRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	if req.Config == nil {
+		req.Config = map[string]interface{}{}
+	}
+
+	if err := h.svc.UpdateAvatarConfig(r.Context(), userID, req.Config); err != nil {
+		slog.Error("UpdateAvatar failed", "user_id", userID, "err", err)
+		writeError(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // GetLeaderboard handles GET /leaderboard.
-// Returns the top 20 users by XP. Cached in-memory for 5 minutes.
 func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	entries, err := h.svc.GetLeaderboard(r.Context())
 	if err != nil {

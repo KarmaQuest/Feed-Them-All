@@ -12,6 +12,7 @@ export interface Ping {
   is_active: boolean
   fed_at: string | null
   animal_type: 'cat' | 'dog' | 'other' | null
+  animal_breed: string | null
   animal_count: number
   created_at: string
   updated_at: string
@@ -22,6 +23,7 @@ export interface CreatePingRequest {
   lat: number
   lon: number
   animal_type?: 'cat' | 'dog' | 'other'
+  animal_breed?: string
   animal_count?: number
 }
 
@@ -46,19 +48,14 @@ export interface FeedingEvent {
 
 export interface UpdatePingRequest {
   animal_type?: 'cat' | 'dog' | 'other' | null
+  animal_breed?: string | null
   animal_count?: number
 }
 
 // ─── API functions ────────────────────────────────────────────────────────────
 
-export async function getPingsNearby(
-  lat: number,
-  lon: number,
-  radius = 2000,
-): Promise<Ping[]> {
-  const res = await apiClient.get<Ping[]>(
-    `/pings?lat=${lat}&lon=${lon}&radius=${radius}`,
-  )
+export async function getPingsNearby(lat: number, lon: number, radius = 2000): Promise<Ping[]> {
+  const res = await apiClient.get<Ping[]>(`/pings?lat=${lat}&lon=${lon}&radius=${radius}`)
   return res.data
 }
 
@@ -70,7 +67,7 @@ export async function createPing(data: CreatePingRequest): Promise<Ping> {
 export async function markFed(
   pingId: string,
   note?: string,
-  animalCountSeen?: number,
+  animalCountSeen?: number
 ): Promise<void> {
   await apiClient.post(`/pings/${pingId}/feedings`, {
     note: note ?? null,
@@ -87,10 +84,7 @@ export async function getPingMedia(pingId: string): Promise<PingMedia[]> {
   return res.data
 }
 
-export async function uploadPingMedia(
-  pingId: string,
-  file: File,
-): Promise<PingMedia> {
+export async function uploadPingMedia(pingId: string, file: File): Promise<PingMedia> {
   const form = new FormData()
   form.append('photo', file)
   const res = await apiClient.post<PingMedia>(`/pings/${pingId}/media`, form, {
@@ -110,5 +104,17 @@ export async function deactivatePing(pingId: string): Promise<void> {
 
 export async function updatePing(pingId: string, data: UpdatePingRequest): Promise<Ping> {
   const res = await apiClient.patch<Ping>(`/pings/${pingId}`, data)
+  return res.data
+}
+
+// ─── Animal breeds ───────────────────────────────────────────────────────────
+
+export interface AnimalGroup {
+  type: string
+  breeds: string[]
+}
+
+export async function listAnimalBreeds(): Promise<AnimalGroup[]> {
+  const res = await apiClient.get<AnimalGroup[]>('/animals/breeds')
   return res.data
 }

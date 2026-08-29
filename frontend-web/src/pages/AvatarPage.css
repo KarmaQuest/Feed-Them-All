@@ -1,0 +1,240 @@
+/* src/pages/AvatarPage.css — Page de personnalisation d'avatar. */
+
+.avatar-page {
+  min-height: 100dvh;
+  background: var(--bg-base);
+  padding: 1.5rem;
+}
+
+.avatar-page__loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: var(--text-muted);
+  font-family: var(--font-pixel);
+  font-size: 0.9rem;
+}
+
+.avatar-page__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.avatar-page__back {
+  background: none;
+  border: none;
+  color: var(--primary-lighter);
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-md);
+  transition: background var(--transition);
+}
+.avatar-page__back:hover {
+  background: var(--primary-bg);
+}
+
+.avatar-page__title {
+  font-family: var(--font-pixel);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+
+.avatar-page__content {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .avatar-page__content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Preview panel ────────────────────────────────────────────────────── */
+.avatar-page__preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.avatar-page__avatar-box {
+  width: 128px;
+  height: 128px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.avatar-page__gender {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.avatar-page__gender-btn {
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-family: var(--font-pixel);
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.avatar-page__gender-btn:hover {
+  border-color: var(--primary-border);
+  color: var(--primary-lighter);
+  background: var(--primary-bg);
+}
+.avatar-page__gender-btn.active {
+  border-color: var(--primary);
+  color: var(--primary-light);
+  background: var(--primary-bg);
+}
+
+/* ── Selectors panel ──────────────────────────────────────────────────── */
+.avatar-page__selectors {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.avatar-page__category-title {
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.avatar-page__item-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.avatar-page__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  border: 2px solid transparent;
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: all var(--transition);
+  min-width: 72px;
+}
+.avatar-page__item:hover {
+  background: var(--primary-bg);
+  border-color: var(--primary-border);
+}
+.avatar-page__item.selected {
+  background: var(--primary-bg);
+  border-color: var(--primary);
+}
+
+.avatar-page__item-img {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+.avatar-page__item-placeholder {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-size: 1.2rem;
+}
+
+.avatar-page__item-name {
+  font-size: 0.55rem;
+  color: var(--text-faint);
+  font-family: var(--font-pixel);
+  text-align: center;
+  max-width: 64px;
+  word-break: break-all;
+}
+
+.avatar-page__empty {
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  color: var(--text-faint);
+  padding: 0.5rem 0;
+}
+
+/* ── Messages ─────────────────────────────────────────────────────────── */
+.avatar-page__error {
+  color: var(--danger);
+  font-family: var(--font-pixel);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.avatar-page__success {
+  color: var(--success);
+  font-family: var(--font-pixel);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+/* ── Actions ──────────────────────────────────────────────────────────── */
+.avatar-page__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.avatar-page__btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-pixel);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.avatar-page__btn--save {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+.avatar-page__btn--save:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+.avatar-page__btn--save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.avatar-page__btn--cancel {
+  background: transparent;
+  color: var(--text-muted);
+}
+.avatar-page__btn--cancel:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}

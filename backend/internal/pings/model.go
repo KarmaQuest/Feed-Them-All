@@ -37,6 +37,7 @@ type Ping struct {
 	IsActive    bool       `json:"is_active"`
 	FedAt       *time.Time `json:"fed_at,omitempty"`  // last feeding time (kept in sync with feeding events)
 	AnimalType  *string    `json:"animal_type,omitempty"` // "cat", "dog", "other" — nil for food pings
+	AnimalBreed *string    `json:"animal_breed,omitempty"` // specific breed (carlin, labrador...) — nil if unset
 	AnimalCount int        `json:"animal_count"`  // number of animals observed (default 1)
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
@@ -50,6 +51,7 @@ type CreatePingRequest struct {
 	Lat         float64 `json:"lat"`
 	Lon         float64 `json:"lon"`
 	AnimalType  *string `json:"animal_type,omitempty"`  // "cat", "dog", "other"
+	AnimalBreed *string `json:"animal_breed,omitempty"` // specific breed
 	AnimalCount *int    `json:"animal_count,omitempty"` // defaults to 1 if omitted
 }
 
@@ -69,6 +71,7 @@ type FeedingEvent struct {
 // Only the creator may update animal_type and animal_count.
 type UpdatePingRequest struct {
 	AnimalType  *string `json:"animal_type"`  // "cat", "dog", "other"
+	AnimalBreed *string `json:"animal_breed"` // specific breed
 	AnimalCount *int    `json:"animal_count"` // must be >= 1
 }
 

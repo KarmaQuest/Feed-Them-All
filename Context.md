@@ -424,3 +424,38 @@ Le WebSocket nécessite une **connexion persistante**. Les hébergements de type
 | Mobile | React Native (pas Flutter) | Partage de code JS avec le Web |
 | Carte | Leaflet + OpenStreetMap | Zéro coût, aucune clé API, open source |
 | Auth | JWT stateless | Simplifie le scaling horizontal |
+
+---
+
+## Session Summary — 2026-06-28/29
+
+### SM Passe 1 achevée (SM-01 à SM-11e)
+
+Tout le Sprite Management System est opérationnel :
+
+**Backend**
+- `SPRITES_DIR` config (default `./sprites`), serveur fichier sur `GET /sprites/*`
+- CRUD admin : `GET /admin/sprites` (arborescence), `POST /admin/sprites/upload` (validé MIME PNG, anti-path-traversal, max 5 MB, avec `filename` optionnel), `DELETE /admin/sprites?path=...`
+- `POST /admin/shop-items/{id}/sprite` → `shop/{slug}/south.png`
+- Override de nom via `filename` en form-data
+
+**Frontend admin**
+- Onglet "Sprites" : arbre récursif, preview 64px, upload, suppression, animation hover pour `spritesheet.png`
+- Formulaire Boutique : sélecteur sprite grille (thumbnails 64px depuis `shop/`), upload inline, auto-slug depuis le nom avec vérification collision + incrémentation (`slug_01`), preview animation ▶
+- AvatarSprite : `sm:32, md:48, lg:64` — suppression bord/shadow
+
+**Carte Leaflet**
+- `createAvatarIcon()` → 64px, pas de bord/shadow, résolution `/api/sprites/shop/{outfit}/south.png` sinon `/api/sprites/default/characters/{gender}/south.png`
+- Icônes ping 48px avec tentative PNG → fallback SVG via `onerror`
+- Centre par défaut : Hô-Chi-Minh-Ville (10.7769, 106.7009)
+
+**Sprites 64×64**
+- `backend/sprites/default/characters/male/south.png` ← Base_Character_64
+- `backend/sprites/default/characters/female/south.png` ← idem (MVP)
+
+### Prochaines tâches
+- P7-03 à P7-08 (temps réel, customisation, boutique)
+- SM-12 à SM-16 (animations spritesheet)
+
+### Bugs corrigés
+- **FIX-04** : Upload `filename=` ignoré dans le Path retourné (service.go utilisait `filepath.Base(filePath)` au lieu de `name`)

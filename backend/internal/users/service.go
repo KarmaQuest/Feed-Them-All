@@ -113,6 +113,11 @@ func (s *Service) UpdatePrivacy(ctx context.Context, userID string, isPrivate bo
 	return s.store.UpdatePrivacy(ctx, userID, isPrivate)
 }
 
+// UpdateAvatarConfig replaces the avatar_config for the given user.
+func (s *Service) UpdateAvatarConfig(ctx context.Context, userID string, config map[string]interface{}) error {
+	return s.store.UpdateAvatarConfig(ctx, userID, config)
+}
+
 // GetLeaderboard returns the top 20 users by XP with ranks and computed levels.
 // Results are cached in memory for 5 minutes to avoid DB load.
 func (s *Service) GetLeaderboard(ctx context.Context) ([]LeaderboardEntry, error) {

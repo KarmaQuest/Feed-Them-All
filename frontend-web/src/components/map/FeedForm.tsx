@@ -27,7 +27,7 @@ export default function FeedForm({ ping, onDone, onCancel }: Props) {
     try {
       await markFed(ping.id, note || undefined, count)
     } catch {
-      setError('Erreur lors de l\'enregistrement du nourrissage.')
+      setError("Erreur lors de l'enregistrement du nourrissage.")
       setSubmitting(false)
       return
     }
@@ -38,7 +38,7 @@ export default function FeedForm({ ping, onDone, onCancel }: Props) {
       try {
         await uploadPingMedia(ping.id, file)
       } catch {
-        setUploadWarning('Nourrissage enregistré, mais l\'upload de la photo a échoué.')
+        setUploadWarning("Nourrissage enregistré, mais l'upload de la photo a échoué.")
       }
     }
 
@@ -57,26 +57,21 @@ export default function FeedForm({ ping, onDone, onCancel }: Props) {
         min={1}
         max={50}
         value={count}
-        onChange={(e) => setCount(Number(e.target.value))}
+        onChange={e => setCount(Number(e.target.value))}
         className="feed-form__input"
       />
 
       <label className="feed-form__label">Note (optionnel)</label>
       <textarea
         value={note}
-        onChange={(e) => setNote(e.target.value)}
+        onChange={e => setNote(e.target.value)}
         placeholder="Ex : 2 chats nourris, eau laissée..."
         maxLength={300}
         className="feed-form__textarea"
       />
 
       <label className="feed-form__label">Photo (optionnel)</label>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="feed-form__file"
-      />
+      <input ref={fileRef} type="file" accept="image/*" className="feed-form__file" />
 
       {error && <p className="feed-form__error">{error}</p>}
       {uploadWarning && <p className="feed-form__warning">{uploadWarning}</p>}
@@ -89,10 +84,7 @@ export default function FeedForm({ ping, onDone, onCancel }: Props) {
         >
           {submitting ? '...' : 'Valider'}
         </button>
-        <button
-          className="ping-popup__btn ping-popup__btn--cancel"
-          onClick={onCancel}
-        >
+        <button className="btn btn--style-red btn--sm" onClick={onCancel}>
           Annuler
         </button>
       </div>

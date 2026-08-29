@@ -10,6 +10,7 @@ export interface UserProfile {
   id: string
   username: string
   role: string
+  roles: string[]
   xp: number
   level: number
   badges: BadgeSummary[]
@@ -34,4 +35,8 @@ export async function getUserProfile(userId: string): Promise<UserProfile | Priv
 
 export async function updatePrivacy(isPrivate: boolean): Promise<void> {
   await apiClient.patch('/users/me/privacy', { is_private: isPrivate })
+}
+
+export async function updateAvatar(config: Record<string, unknown>): Promise<void> {
+  await apiClient.patch('/users/me/avatar', { config })
 }

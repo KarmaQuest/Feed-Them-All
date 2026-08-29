@@ -177,7 +177,8 @@ func (s *Service) Create(ctx context.Context, userID string, req CreatePingReque
 		animalCount = *req.AnimalCount
 	}
 
-	ping, err := s.store.Create(ctx, userID, t, req.Lat, req.Lon, animalType, animalCount)
+	// Pass animal_breed through (nil if not set)
+	ping, err := s.store.Create(ctx, userID, t, req.Lat, req.Lon, animalType, animalCount, req.AnimalBreed)
 	if err != nil {
 		return Ping{}, fmt.Errorf("pings.Service.Create: %w", err)
 	}
@@ -452,7 +453,7 @@ func (s *Service) UpdatePing(ctx context.Context, pingID, userID string, req Upd
 		return Ping{}, fmt.Errorf("animal_count must be between 1 and 100")
 	}
 
-	ping, err := s.store.UpdatePing(ctx, pingID, userID, req.AnimalType, req.AnimalCount)
+	ping, err := s.store.UpdatePing(ctx, pingID, userID, req.AnimalType, req.AnimalBreed, req.AnimalCount)
 	if err != nil {
 		return Ping{}, err
 	}

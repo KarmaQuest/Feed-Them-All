@@ -48,6 +48,14 @@
 | 2026-06-13 | `POST /pings/:id/feedings` (note + animal_count_seen) | ✅ 201 | FeedingEvent créé, fed_at mis à jour, XP feed accordé |
 | 2026-06-13 | `GET /pings/:id/feedings` | ✅ 200 | Historique retourné (1 événement) |
 | 2026-06-13 | Tests unitaires `pings` après refactor (57/57) | ✅ PASS | `go test ./internal/pings/...` |
+| 2026-06-28 | `GET /sprites/default/characters/male/south.png` 64×64 | ✅ 200 | Sprite 64×64 servi |
+| 2026-06-28 | `GET /admin/sprites` (arborescence) | ✅ JSON | Tous les dossiers/fichiers listés |
+| 2026-06-28 | `POST /admin/sprites/upload` PNG valide | ✅ 201 | Upload réussi |
+| 2026-06-28 | `POST /admin/sprites/upload` fichier non-PNG | ✅ 400 | Rejeté |
+| 2026-06-28 | `POST /admin/sprites/upload` path traversal | ✅ 400 | Rejeté |
+| 2026-06-28 | `DELETE /admin/sprites?path=...` | ✅ 204 | Supprimé |
+| 2026-06-28 | `POST /admin/shop-items/{id}/sprite` → `south.png` | ✅ 201 | Fichier nommé correctement |
+| 2026-06-28 | `POST /admin/sprites/upload` avec `filename=south.png` | ✅ 201 | Override de nom fonctionnel |
 
 ---
 
@@ -190,14 +198,14 @@
 - [x] **P6-01** Page Inscription (`/register`) — formulaire + appel API
 - [x] **P6-02** Page Connexion utilisateur (`/user-login`) + Connexion admin (`/login`) — formulaires + stockage token
 - [x] **P6-03** Gestion du refresh token automatique (intercepteur Axios + `initialize()` au démarrage de l'app)
-- [ ] **P6-04** Page Profil (`/profile`) — affichage XP, badges, avatar
+- [x] **P6-04** Page Profil (`/profile`) — affichage XP, badges, avatar
 - [x] **P6-05** Store Zustand : état auth (user, isLogged, initialize, login, logout)
 
 ---
 
 ## Phase 7 — Frontend Web : Avatar Pixel Art
 
-- [ ] **P7-01** Créer le composant `AvatarSprite` — affiche le bon sprite selon la config `{skin, outfit, accessory}`
+- [x] **P7-01** Créer le composant `AvatarSprite` — affiche le sprite selon la config `{gender, skin, outfit, accessory}` (fallback icône couleur en attendant les sprites)
 
 ---
 
@@ -217,6 +225,7 @@
 - [x] **FIX-01** `ProtectedRoute` redirigait immédiatement avant que `initialize()` soit résolu → boucle infinie sur `/admin`. Fix : ajout de `initialized: boolean` dans le store auth — `ProtectedRoute` affiche `null` jusqu'à ce que la session soit restaurée.
 - [x] **FIX-02** Autofill navigateur (Chrome/Firefox) non capté par React `useState` → login envoyait des champs vides. Fix : lecture des valeurs depuis `e.currentTarget.elements` dans `AuthForm.handleSubmit`.
 - [x] **FIX-03** `MapSidebar.tsx` corrompu (BOM UTF-8 + double-encodage) via `Set-Content` PowerShell 5.1. Fix : fichier réécrit via `create_file` (VS Code agent). **RÈGLE** : ne jamais utiliser `Set-Content` sur des fichiers source.
+- [x] **FIX-04** Upload sprite avec `filename=south.png` ignoré — le Path retourné utilisait `filepath.Base(filePath)` au lieu de la variable `name`. Fix : `service.go:364` — retourner `name` au lieu de `filepath.Base(filePath)`.
 
 ---
 
@@ -230,7 +239,12 @@
 - [x] **UX-06** Fix critique : `NavPanel`, `SignalPanel`, `PingPanel` extraits hors du composant parent → plus de démontage/remontage React
 - [x] **UX-07** Fix `ListFeedingEvents` backend : JOIN `users` pour retourner `username` (était UUID seul)
 - [x] **UX-08** Fix `FeedingEvent` frontend : champ `fed_at` (était `created_at` → `Invalid Date`)
-- [ ] **P7-02** Afficher l'avatar du Feeder connecté sur la carte Leaflet (marqueur `L.divIcon` avec sprite animé)
+- [x] **P7-02** Afficher l'avatar du Feeder connecté sur la carte Leaflet (marqueur `L.divIcon` avec sprite statique)
+  - [x] Copier les sprites PNG dans `frontend-web/public/assets/sprites/characters/{male,female}/south.png`
+  - [x] Refonte `AvatarSprite.tsx` : remplacer emoji/fond couleur par `<img>` vers le sprite PNG
+  - [x] Nettoyer `AvatarSprite.css` : supprimer styles couleur/emoji, garder dimensions + borders + shadow
+  - [x] `markers.ts` : ajouter `createAvatarIcon(config)` avec `L.divIcon` + `<img>`
+  - [x] `MapView.tsx` : remplacer `userIcon` par `createAvatarIcon(user?.avatar_config)`
 - [ ] **P7-03** Mise à jour de la position de l'avatar en temps réel (push GPS → WebSocket)
 - [ ] **P7-04** Page customisation avatar (`/avatar`) — sélecteur visuel de skin/tenue/accessoire
 - [ ] **P7-05** Sauvegarder la config avatar en DB via `PATCH /users/me/avatar`
@@ -244,6 +258,39 @@
   - Deux onglets : **Quêtes** (gratuit, déblocage via XP/succès) · **Boutique** (achat one-shot Stripe)
   - Appel `POST /shop/purchase` → crédite l'item dans l'inventaire utilisateur
   - Appel `GET /users/me/inventory` → liste les items possédés
+
+---
+
+## SM — Sprite Management System (Dashboard Upload)
+
+### Passe 1 — Upload statique (PNG unique)
+
+- [x] **SM-01** Ajouter `SPRITES_DIR` à la config Go (variable d'env, default: `./sprites`)
+- [x] **SM-02** Route `GET /sprites/*` dans Go — servir les fichiers statiques depuis `backend/sprites/`
+- [x] **SM-03** Migrer les sprites existants de `frontend-web/public/assets/sprites/` → `backend/sprites/default/characters/{male,female}/south.png`
+- [x] **SM-04** Créer dossier `backend/sprites/default/markers/` pour les futurs PNGs d'icônes
+- [x] **SM-05** Routes admin : `POST /admin/sprites/upload`, `GET /admin/sprites`, `DELETE /admin/sprites/{type}/{slug}/{file}`
+- [x] **SM-06** Validation upload (MIME type PNG, anti-path-traversal, taille max 5 Mo)
+- [x] **SM-07** Frontend : nouvelles fonctions API `listSprites`, `deleteSprite`, `uploadShopItemSprite` dans `api/admin.ts`
+- [x] **SM-08** Onglet "Sprites" minimaliste dans l'admin : liste arborescente + preview thumbnail + suppression
+- [x] **SM-09** Mettre à jour `createAvatarIcon()` et `AvatarSprite.tsx` : résolution chemin `/api/sprites/...` (shop → default), sprite 64×64, suppression bord/shadow
+- [x] **SM-10** Mettre à jour icônes ping (animal/food/fed) : essai PNG `/api/sprites/default/markers/{type}.png` → fallback SVG, taille 48px
+- [x] **SM-11** Upload sprite intégré au formulaire Boutique : `POST /admin/shop-items/{id}/sprite` stocke dans `shop/{slug}/south.png`
+- [x] **SM-11b** Upload avec override de nom de fichier (`filename=south.png`) — backend + frontend
+- [x] **SM-11c** Sélecteur de sprite dans le formulaire boutique (grille thumbnails 64px depuis `shop/`)
+- [x] **SM-11d** Auto-slug depuis le nom de l'item avec vérification collision + incrémentation
+- [x] **SM-11e** Preview animation spritesheet hover dans l'arborescence Sprites + bouton ▶ dans le sélecteur boutique
+
+### Passe 2 — Animations (spritesheet + CSS stepping)
+>
+> Progress : Preview frontend ✅ (hover dans SpritesSection, bouton ▶ dans sélecteur boutique).
+> Reste à faire : upload backend + résolution + rendu carte.
+
+- [ ] **SM-12** Support upload spritesheet PNG + JSON metadata (backend)
+- [ ] **SM-13** Dashboard : champ "Ajouter une animation" par item (idle/walk/open_door)
+- [ ] **SM-14** Résolution par animation : `shop/{slug}/{animation}/spritesheet.png`
+- [ ] **SM-15** Marqueur carte animé : CSS `background-image` + `background-position` stepping sur `L.divIcon`
+- [ ] **SM-16** AvatarSprite animé avec détection auto de la direction (south/west/east/north)
 
 ---
 

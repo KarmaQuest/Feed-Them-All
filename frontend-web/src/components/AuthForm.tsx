@@ -54,7 +54,11 @@ export default function AuthForm({
     const usernameVal = showUsername
       ? (form.elements.namedItem('username') as HTMLInputElement).value
       : undefined
-    onSubmit({ email: emailVal, password: passwordVal, ...(showUsername ? { username: usernameVal } : {}) })
+    onSubmit({
+      email: emailVal,
+      password: passwordVal,
+      ...(showUsername ? { username: usernameVal } : {}),
+    })
   }
 
   return (
@@ -71,7 +75,7 @@ export default function AuthForm({
                 name="username"
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={e => setUsername(e.target.value)}
                 autoComplete="username"
                 required
               />
@@ -84,7 +88,7 @@ export default function AuthForm({
               name="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               autoComplete="email"
               required
             />
@@ -96,13 +100,13 @@ export default function AuthForm({
               name="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={e => setPassword(e.target.value)}
               autoComplete={showUsername ? 'new-password' : 'current-password'}
               required
             />
           </div>
           {extraFields}
-          <button type="submit" className="btn-primary" disabled={loading}>
+          <button type="submit" className="btn btn--style-yellow btn--full" disabled={loading}>
             {loading ? '…' : submitLabel}
           </button>
           {error && <div className="login-error">{error}</div>}

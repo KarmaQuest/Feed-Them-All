@@ -27,7 +27,7 @@ func newFakeStore() *fakeStore {
 	}
 }
 
-func (f *fakeStore) CreateUser(_ context.Context, email, username, passwordHash, role string) (User, error) {
+func (f *fakeStore) CreateUser(_ context.Context, email, username, passwordHash, role string, roles []string, avatarConfig []byte) (User, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -45,9 +45,13 @@ func (f *fakeStore) CreateUser(_ context.Context, email, username, passwordHash,
 		Email:     email,
 		Username:  username,
 		Role:      role,
+		Roles:     roles,
 		IsPremium: false,
 		XP:        0,
 		CreatedAt: time.Now(),
+	}
+	if len(avatarConfig) > 0 {
+		u.AvatarConfig = avatarConfig
 	}
 	f.users[email] = fakeUser{User: u, passwordHash: passwordHash}
 	return u, nil
@@ -85,5 +89,9 @@ func (f *fakeStore) DeleteRefreshToken(_ context.Context, userID string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	delete(f.refreshTokens, userID)
+	return nil
+}
+
+func (f *fakeStore) GrantDefaultAvatarItems(_ context.Context, _ string) error {
 	return nil
 }

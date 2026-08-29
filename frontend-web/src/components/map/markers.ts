@@ -12,50 +12,70 @@ L.Icon.Default.mergeOptions({
   shadowUrl: '',
 })
 
-// ── Ping animal (patte) ───────────────────────────────────────────────────────
-const pawSVG = `
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#1a1d27" stroke="#6366f1" stroke-width="2"/>
-  <text x="16" y="22" font-size="16" text-anchor="middle">🐾</text>
-</svg>`
+// ── Ping icons with breed support and sprite fallback ──────────────────────
 
-export const animalIcon = L.divIcon({
-  html: `<div style="image-rendering:pixelated">${pawSVG}</div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -34],
-  className: '',
-})
+const PING_ICON_SIZE = { width: 48, height: 48, anchor: [24, 48] as [number, number] }
 
-// ── Ping nourriture (gamelle) ──────────────────────────────────────────────────
-const bowlSVG = `
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#1a1d27" stroke="#fbbf24" stroke-width="2"/>
-  <text x="16" y="22" font-size="16" text-anchor="middle">🍖</text>
-</svg>`
+// Mapping from ping type / status → sprite filename (without extension)
+const ICON_MAP: Record<string, string> = {
+  animal: 'paw',
+  food: 'bowl',
+  fed: 'check',
+}
 
-export const foodIcon = L.divIcon({
-  html: `<div style="image-rendering:pixelated">${bowlSVG}</div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -34],
-  className: '',
-})
+interface PingIconOptions {
+  animal_type?: string | null
+  animal_breed?: string | null
+}
 
-// ── Ping nourri (étoile verte) ─────────────────────────────────────────────────
-const fedSVG = `
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#1a1d27" stroke="#34d399" stroke-width="2"/>
-  <text x="16" y="22" font-size="16" text-anchor="middle">✅</text>
-</svg>`
+function pingIcon(
+  typeOrStatus: string,
+  fallbackSvg: string,
+  strokeColor: string,
+  opts?: PingIconOptions,
+): L.DivIcon {
+  const spriteName = ICON_MAP[typeOrStatus] || 'paw'
+  const breed = opts?.animal_breed
+  const animalType = opts?.animal_type
+  let spriteSrc: string
+  if (breed && animalType && (animalType === 'cat' || animalType === 'dog')) {
+    spriteSrc = `/api/sprites/default/animals/${animalType}s/${breed}.png`
+  } else {
+    spriteSrc = `/api/sprites/default/markers/${spriteName}.png`
+  }
+  const borderPx = 8
+  return L.divIcon({
+    html: `<div style="position:relative;width:48px;height:48px;image-rendering:pixelated">
+      <img
+        src="${spriteSrc}"
+        style="width:48px;height:48px;image-rendering:pixelated;border-radius:${borderPx}px;border:0"
+        onerror="
+          this.style.display='none';
+          this.nextElementSibling.style.display='flex';
+        "
+      />
+      <div style="display:none;width:48px;height:48px;border-radius:${borderPx}px;background:#1a1d27;border:1px solid ${strokeColor};align-items:center;justify-content:center;font-size:24px;position:absolute;top:0;left:0">
+        ${fallbackSvg}
+      </div>
+    </div>`,
+    iconSize: [PING_ICON_SIZE.width, PING_ICON_SIZE.height],
+    iconAnchor: PING_ICON_SIZE.anchor,
+    popupAnchor: [0, -50],
+    className: '',
+  })
+}
 
-export const fedIcon = L.divIcon({
-  html: `<div style="image-rendering:pixelated">${fedSVG}</div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -34],
-  className: '',
-})
+export function animalIcon(opts?: PingIconOptions) {
+  return pingIcon('animal', `<span>🐾</span>`, '#6366f1', opts)
+}
+
+export function foodIcon(opts?: PingIconOptions) {
+  return pingIcon('food', `<span>🍖</span>`, '#fbbf24', opts)
+}
+
+export function fedIcon(opts?: PingIconOptions) {
+  return pingIcon('fed', `<span>✅</span>`, '#34d399', opts)
+}
 
 // ── Position utilisateur ───────────────────────────────────────────────────────
 export const userIcon = L.divIcon({
@@ -70,6 +90,25 @@ export const userIcon = L.divIcon({
   iconAnchor: [7, 7],
   className: '',
 })
+
+// ── Avatar du Feeder connecté ──────────────────────────────────────────────────
+export function createAvatarIcon(config?: Record<string, unknown> | null, size = 48): L.DivIcon {
+  const outfit = config?.outfit as string | undefined
+  const gender = (config?.gender as string) === 'female' ? 'female' : 'male'
+  const src = outfit
+    ? `/api/sprites/shop/${outfit}/south.png`
+    : `/api/sprites/default/characters/${gender}/south.png`
+  return L.divIcon({
+    html: `<img
+      src="${src}"
+      style="width:${size}px;height:${size}px;image-rendering:pixelated"
+      onerror="this.style.display='none'"
+    />`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    className: '',
+  })
+}
 
 // ── Feeder actif (avatar générique) ───────────────────────────────────────────
 export const feederIcon = L.divIcon({

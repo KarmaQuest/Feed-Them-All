@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    hmr: {
+      overlay: false,
+    },
     proxy: {
       // Proxy /api/* → Go backend at localhost:8080
       // Removes the /api prefix before forwarding.

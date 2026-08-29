@@ -26,4 +26,8 @@ type Store interface {
 
 	// UpdatePrivacy sets is_private for the given user.
 	UpdatePrivacy(ctx context.Context, userID string, isPrivate bool) error
+
+	// UpdateAvatarConfig replaces the avatar_config JSONB for the given user.
+	// config is a free-form map (skin, outfit, gender, etc.).
+	UpdateAvatarConfig(ctx context.Context, userID string, config map[string]interface{}) error
 }

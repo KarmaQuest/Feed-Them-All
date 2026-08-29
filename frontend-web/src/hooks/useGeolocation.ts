@@ -18,32 +18,32 @@ export const DEFAULT_LON = 106.7009
 export const DEFAULT_ZOOM = 13
 
 export function useGeolocation(): GeolocationState {
-  const setUserPosition = useMapStore((s) => s.setUserPosition)
+  const setUserPosition = useMapStore(s => s.setUserPosition)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setError('La géolocalisation n\'est pas supportée par ce navigateur.')
+      setError("La géolocalisation n'est pas supportée par ce navigateur.")
       setLoading(false)
       return
     }
 
     const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
+      pos => {
         setUserPosition(pos.coords.latitude, pos.coords.longitude)
         setLoading(false)
         setError(null)
       },
-      (err) => {
+      err => {
         if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
-          setError('Géolocalisation refusée — carte centrée sur Paris.')
+          setError('Géolocalisation refusée — carte centrée sur Hô-Chi-Minh-Ville.')
         } else {
-          setError('Impossible d\'obtenir la position GPS.')
+          setError("Impossible d'obtenir la position GPS.")
         }
         setLoading(false)
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
     )
 
     return () => navigator.geolocation.clearWatch(watchId)

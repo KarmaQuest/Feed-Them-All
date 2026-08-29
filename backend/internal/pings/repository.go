@@ -50,10 +50,10 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // Create inserts a new ping and returns the full Ping struct with generated ID and timestamps.
 // lon/lat are stored as GEOGRAPHY(POINT, 4326) — note parameter order: ST_MakePoint(lon, lat).
 // animalType is NULL for food pings; animalCount defaults to 1.
-func (r *Repository) Create(ctx context.Context, userID, pingType string, lat, lon float64, animalType *string, animalCount int) (Ping, error) {
+func (r *Repository) Create(ctx context.Context, userID, pingType string, lat, lon float64, animalType *string, animalCount int, animalBreed *string) (Ping, error) {
 	const q = `
-		INSERT INTO pings (type, location, created_by, animal_type, animal_count)
-		VALUES ($1, ST_MakePoint($2, $3)::geography, $4, $5, $6)
+		INSERT INTO pings (type, location, created_by, animal_type, animal_count, animal_breed)
+		VALUES ($1, ST_MakePoint($2, $3)::geography, $4, $5, $6, $7)
 		RETURNING
 			id,
 			type,
@@ -63,15 +63,16 @@ func (r *Repository) Create(ctx context.Context, userID, pingType string, lat, l
 			is_active,
 			fed_at,
 			animal_type,
+			animal_breed,
 			animal_count,
 			created_at,
 			updated_at
 	`
 	// $2 = lon (X axis), $3 = lat (Y axis) — PostGIS convention
 	var p Ping
-	err := r.db.QueryRow(ctx, q, pingType, lon, lat, userID, animalType, animalCount).Scan(
+	err := r.db.QueryRow(ctx, q, pingType, lon, lat, userID, animalType, animalCount, animalBreed).Scan(
 		&p.ID, &p.Type, &p.Lat, &p.Lon, &p.CreatedBy,
-		&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
+		&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalBreed, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		return Ping{}, fmt.Errorf("pings.Create: %w", err)
@@ -89,7 +90,7 @@ func (r *Repository) ListNearby(ctx context.Context, q NearbyQuery) ([]Ping, err
 			id, type,
 			ST_Y(location::geometry) AS lat,
 			ST_X(location::geometry) AS lon,
-			created_by, is_active, fed_at, animal_type, animal_count, created_at, updated_at
+			created_by, is_active, fed_at, animal_type, animal_breed, animal_count, created_at, updated_at
 		FROM pings
 		WHERE is_active = TRUE
 		  AND ST_DWithin(location, ST_MakePoint($1, $2)::geography, $3)
@@ -101,7 +102,7 @@ func (r *Repository) ListNearby(ctx context.Context, q NearbyQuery) ([]Ping, err
 			id, type,
 			ST_Y(location::geometry) AS lat,
 			ST_X(location::geometry) AS lon,
-			created_by, is_active, fed_at, animal_type, animal_count, created_at, updated_at
+			created_by, is_active, fed_at, animal_type, animal_breed, animal_count, created_at, updated_at
 		FROM pings
 		WHERE is_active = TRUE
 		  AND type = $4
@@ -137,7 +138,7 @@ func (r *Repository) ListNearby(ctx context.Context, q NearbyQuery) ([]Ping, err
 		var p Ping
 		if err := rows.Scan(
 			&p.ID, &p.Type, &p.Lat, &p.Lon, &p.CreatedBy,
-			&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
+			&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalBreed, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("pings.ListNearby scan: %w", err)
 		}
@@ -157,13 +158,13 @@ func (r *Repository) GetByID(ctx context.Context, id string) (Ping, error) {
 			id, type,
 			ST_Y(location::geometry) AS lat,
 			ST_X(location::geometry) AS lon,
-			created_by, is_active, fed_at, animal_type, animal_count, created_at, updated_at
+			created_by, is_active, fed_at, animal_type, animal_breed, animal_count, created_at, updated_at
 		FROM pings WHERE id = $1
 	`
 	var p Ping
 	err := r.db.QueryRow(ctx, q, id).Scan(
 		&p.ID, &p.Type, &p.Lat, &p.Lon, &p.CreatedBy,
-		&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
+		&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalBreed, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		return Ping{}, fmt.Errorf("pings.GetByID: %w", err)
@@ -406,9 +407,9 @@ func (r *Repository) AddSignalEvent(ctx context.Context, pingID, userID string) 
 	return nil
 }
 
-// UpdatePing updates animal_type and/or animal_count for a ping.
+// UpdatePing updates animal_type, animal_breed, and/or animal_count for a ping.
 // Only the owner may update.
-func (r *Repository) UpdatePing(ctx context.Context, id, userID string, animalType *string, animalCount *int) (Ping, error) {
+func (r *Repository) UpdatePing(ctx context.Context, id, userID string, animalType *string, animalBreed *string, animalCount *int) (Ping, error) {
 	// Verify ownership first
 	var ownerID string
 	var isActive bool
@@ -427,7 +428,8 @@ func (r *Repository) UpdatePing(ctx context.Context, id, userID string, animalTy
 		UPDATE pings
 		SET
 			animal_type  = COALESCE($2, animal_type),
-			animal_count = COALESCE($3, animal_count),
+			animal_breed = CASE WHEN $3::VARCHAR IS NOT NULL THEN $3 ELSE animal_breed END,
+			animal_count = COALESCE($4, animal_count),
 			updated_at   = NOW()
 		WHERE id = $1
 		RETURNING
@@ -435,13 +437,13 @@ func (r *Repository) UpdatePing(ctx context.Context, id, userID string, animalTy
 			ST_Y(location::geometry) AS lat,
 			ST_X(location::geometry) AS lon,
 			created_by, is_active, fed_at,
-			animal_type, animal_count,
+			animal_type, animal_breed, animal_count,
 			created_at, updated_at
 	`
 	var p Ping
-	err = r.db.QueryRow(ctx, q, id, animalType, animalCount).Scan(
+	err = r.db.QueryRow(ctx, q, id, animalType, animalBreed, animalCount).Scan(
 		&p.ID, &p.Type, &p.Lat, &p.Lon, &p.CreatedBy,
-		&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
+		&p.IsActive, &p.FedAt, &p.AnimalType, &p.AnimalBreed, &p.AnimalCount, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		return Ping{}, fmt.Errorf("pings.UpdatePing: %w", err)

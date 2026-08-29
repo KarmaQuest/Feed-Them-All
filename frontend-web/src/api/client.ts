@@ -24,7 +24,7 @@ export function getAccessToken(): string | null {
 }
 
 // Attach access token to every request
-apiClient.interceptors.request.use((config) => {
+apiClient.interceptors.request.use(config => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
   }
@@ -33,17 +33,13 @@ apiClient.interceptors.request.use((config) => {
 
 // Auto-refresh on 401
 apiClient.interceptors.response.use(
-  (res) => res,
-  async (error) => {
+  res => res,
+  async error => {
     const original = error.config
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true
       try {
-        const res = await axios.post(
-          `${BASE_URL}/auth/refresh`,
-          {},
-          { withCredentials: true },
-        )
+        const res = await axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true })
         const newToken = res.data.access_token
         setAccessToken(newToken)
         original.headers.Authorization = `Bearer ${newToken}`
@@ -56,5 +52,5 @@ apiClient.interceptors.response.use(
       }
     }
     return Promise.reject(error)
-  },
+  }
 )

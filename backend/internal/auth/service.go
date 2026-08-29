@@ -32,8 +32,10 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -132,8 +134,14 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (TokenRespo
 		return TokenResponse{}, "", fmt.Errorf("auth.Register hash: %w", err)
 	}
 
+	// Serialize avatar_config to JSON bytes
+	var avatarCfgJSON []byte
+	if len(req.AvatarConfig) > 0 {
+		avatarCfgJSON, _ = json.Marshal(req.AvatarConfig)
+	}
+
 	// Insert user
-	user, err := s.repo.CreateUser(ctx, req.Email, req.Username, string(hash), primaryRole, req.Roles)
+	user, err := s.repo.CreateUser(ctx, req.Email, req.Username, string(hash), primaryRole, req.Roles, avatarCfgJSON)
 	if err != nil {
 		// Map DB constraint errors to friendly sentinels
 		msg := err.Error()
@@ -144,6 +152,12 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (TokenRespo
 			return TokenResponse{}, "", ErrUsernameTaken
 		}
 		return TokenResponse{}, "", fmt.Errorf("auth.Register insert: %w", err)
+	}
+
+	// Grant 3 default avatar items (idempotent)
+	if err := s.repo.GrantDefaultAvatarItems(ctx, user.ID); err != nil {
+		// Non-fatal: log but don't block registration
+		slog.Error("failed to grant default avatar items", "user_id", user.ID, "err", err)
 	}
 
 	return s.issueTokens(ctx, user)

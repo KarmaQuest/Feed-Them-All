@@ -19,6 +19,7 @@ type Config struct {
 	StripeSecretKey     string
 	StripeWebhookSecret string
 	UploadDir           string
+	SpritesDir          string
 }
 
 // IsDev reports whether the server is running in development mode.
@@ -37,6 +38,7 @@ func Load() Config {
 		StripeSecretKey:     os.Getenv("STRIPE_SECRET_KEY"),
 		StripeWebhookSecret: os.Getenv("STRIPE_WEBHOOK_SECRET"),
 		UploadDir:           os.Getenv("UPLOAD_DIR"),
+		SpritesDir:          os.Getenv("SPRITES_DIR"),
 	}
 
 	// Required
@@ -54,6 +56,9 @@ func Load() Config {
 	}
 	if cfg.UploadDir == "" {
 		cfg.UploadDir = "./uploads"
+	}
+	if cfg.SpritesDir == "" {
+		cfg.SpritesDir = "./sprites"
 	}
 
 	// S7 — Block insecure default secrets in production (OWASP A02)

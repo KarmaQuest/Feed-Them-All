@@ -355,11 +355,11 @@ const listPingsAdminQuery = `
 SELECT p.id, p.type, p.created_by, p.is_active,
        COUNT(pr.id) AS report_count,
        to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-       p.animal_type, p.animal_count
+       p.animal_type, p.animal_breed, p.animal_count
 FROM pings p
 LEFT JOIN ping_reports pr ON pr.ping_id = p.id
 WHERE ($1 = FALSE OR p.is_active = TRUE)
-GROUP BY p.id
+GROUP BY p.id, p.animal_type, p.animal_breed, p.animal_count
 HAVING ($2 = FALSE OR COUNT(pr.id) > 0)
 ORDER BY report_count DESC, p.created_at DESC
 LIMIT 100`
@@ -374,7 +374,7 @@ func (r *Repository) ListPingsAdmin(ctx context.Context, activeOnly, flaggedOnly
 	var pings []AdminPing
 	for rows.Next() {
 		var p AdminPing
-		if err := rows.Scan(&p.ID, &p.Type, &p.CreatedBy, &p.IsActive, &p.ReportCount, &p.CreatedAt, &p.AnimalType, &p.AnimalCount); err != nil {
+		if err := rows.Scan(&p.ID, &p.Type, &p.CreatedBy, &p.IsActive, &p.ReportCount, &p.CreatedAt, &p.AnimalType, &p.AnimalBreed, &p.AnimalCount); err != nil {
 			return nil, fmt.Errorf("admin.ListPingsAdmin scan: %w", err)
 		}
 		pings = append(pings, p)

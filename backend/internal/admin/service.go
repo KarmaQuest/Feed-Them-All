@@ -13,6 +13,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -27,6 +31,7 @@ type ThresholdReloader interface {
 type Service struct {
 	store            Store
 	thresholdReloader ThresholdReloader // injected from users.Service (optional)
+	spritesDir       string
 }
 
 // NewService creates an admin Service.
@@ -38,6 +43,11 @@ func NewService(store Store) *Service {
 // after modifying level_thresholds.
 func (s *Service) SetThresholdReloader(r ThresholdReloader) {
 	s.thresholdReloader = r
+}
+
+// SetSpritesDir sets the root directory for sprite file operations.
+func (s *Service) SetSpritesDir(dir string) {
+	s.spritesDir = dir
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -275,4 +285,113 @@ func (s *Service) UpdateFeedingEvent(ctx context.Context, eventID string, req Up
 
 func (s *Service) DeleteFeedingEvent(ctx context.Context, eventID string) error {
 	return s.store.DeleteFeedingEvent(ctx, eventID)
+}
+
+// ─── Sprites ───────────────────────────────────────────────────────────────────
+
+// ListSprites walks the sprites directory and returns a tree of files.
+func (s *Service) ListSprites(ctx context.Context) ([]SpriteEntry, error) {
+	if s.spritesDir == "" {
+		return nil, errors.New("sprites directory not configured")
+	}
+	return walkDir(s.spritesDir, "")
+}
+
+func walkDir(root, prefix string) ([]SpriteEntry, error) {
+	entries, err := os.ReadDir(filepath.Join(root, prefix))
+	if err != nil {
+		return nil, fmt.Errorf("list sprites: %w", err)
+	}
+	var result []SpriteEntry
+	for _, e := range entries {
+		rel := filepath.Join(prefix, e.Name())
+		entry := SpriteEntry{
+			Name:  e.Name(),
+			IsDir: e.IsDir(),
+			Path:  filepath.ToSlash(rel),
+		}
+		if e.IsDir() {
+			children, err := walkDir(root, rel)
+			if err != nil {
+				return nil, err
+			}
+			entry.Children = children
+		} else {
+			info, err := e.Info()
+			if err == nil {
+				entry.Size = info.Size()
+			}
+		}
+		result = append(result, entry)
+	}
+	return result, nil
+}
+
+// UploadSprite saves an uploaded file under the sprites directory.
+// If destName is empty, the original file name is preserved.
+func (s *Service) UploadSprite(ctx context.Context, filePath, destDir string, destName ...string) (UploadSpriteResponse, error) {
+	if s.spritesDir == "" {
+		return UploadSpriteResponse{}, errors.New("sprites directory not configured")
+	}
+	absDest := filepath.Join(s.spritesDir, destDir)
+	if err := os.MkdirAll(absDest, 0755); err != nil {
+		return UploadSpriteResponse{}, fmt.Errorf("create sprite dir: %w", err)
+	}
+
+	srcFile, err := os.Open(filePath)
+	if err != nil {
+		return UploadSpriteResponse{}, fmt.Errorf("open temp file: %w", err)
+	}
+	defer srcFile.Close()
+
+	name := filepath.Base(filePath)
+	if len(destName) > 0 && destName[0] != "" {
+		name = destName[0]
+	}
+	destPath := filepath.Join(absDest, name)
+	dstFile, err := os.Create(destPath)
+	if err != nil {
+		return UploadSpriteResponse{}, fmt.Errorf("create sprite file: %w", err)
+	}
+	defer dstFile.Close()
+
+	written, err := io.Copy(dstFile, srcFile)
+	if err != nil {
+		return UploadSpriteResponse{}, fmt.Errorf("copy sprite: %w", err)
+	}
+
+	return UploadSpriteResponse{
+		Path: filepath.ToSlash(filepath.Join(destDir, name)),
+		Size: written,
+	}, nil
+}
+
+// DeleteSprite removes a file or directory from the sprites directory.
+func (s *Service) DeleteSprite(ctx context.Context, fullPath string) error {
+	if s.spritesDir == "" {
+		return errors.New("sprites directory not configured")
+	}
+	abs := filepath.Join(s.spritesDir, fullPath)
+	// Security: ensure we don't escape the sprites directory.
+	abs, err := filepath.Abs(abs)
+	if err != nil {
+		return fmt.Errorf("delete sprite abs: %w", err)
+	}
+	absRoot, err := filepath.Abs(s.spritesDir)
+	if err != nil {
+		return fmt.Errorf("delete sprite root: %w", err)
+	}
+	if !strings.HasPrefix(abs, absRoot) {
+		return errors.New("path traversal denied")
+	}
+	if err := os.RemoveAll(abs); err != nil {
+		return fmt.Errorf("delete sprite: %w", err)
+	}
+	return nil
+}
+
+// UploadShopItemSprite uploads a sprite for a shop item, saving as south.png.
+func (s *Service) UploadShopItemSprite(ctx context.Context, itemSlug, filePath string) (UploadSpriteResponse, error) {
+	destDir := filepath.Join("shop", itemSlug)
+	return s.UploadSprite(ctx, filePath, destDir, "south.png")
 }

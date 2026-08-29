@@ -30,7 +30,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 // GetProfile fetches a user's public data, badge list, and activity counts.
 const getUserQuery = `
-SELECT id, username, role, xp, avatar_config, is_private,
+SELECT id, username, role, roles, xp, avatar_config, is_private,
   (SELECT COUNT(*) FROM pings WHERE created_by = u.id AND is_active = TRUE) AS nb_pings,
   (SELECT COUNT(*) FROM ping_feeding_events WHERE fed_by = u.id) AS nb_feedings
 FROM users u
@@ -48,7 +48,7 @@ func (r *Repository) GetProfile(ctx context.Context, userID string) (UserProfile
 	var avatarJSON []byte
 
 	err := r.db.QueryRow(ctx, getUserQuery, userID).
-		Scan(&p.ID, &p.Username, &p.Role, &p.XP, &avatarJSON, &p.IsPrivate, &p.NbPings, &p.NbFeedings)
+		Scan(&p.ID, &p.Username, &p.Role, &p.Roles, &p.XP, &avatarJSON, &p.IsPrivate, &p.NbPings, &p.NbFeedings)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return UserProfile{}, ErrNotFound
 	}
@@ -155,6 +155,19 @@ func (r *Repository) UpdatePrivacy(ctx context.Context, userID string, isPrivate
 	_, err := r.db.Exec(ctx, `UPDATE users SET is_private = $2 WHERE id = $1`, userID, isPrivate)
 	if err != nil {
 		return fmt.Errorf("users.UpdatePrivacy: %w", err)
+	}
+	return nil
+}
+
+// UpdateAvatarConfig replaces the avatar_config JSONB for the given user.
+func (r *Repository) UpdateAvatarConfig(ctx context.Context, userID string, config map[string]interface{}) error {
+	configJSON, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("users.UpdateAvatarConfig marshal: %w", err)
+	}
+	_, err = r.db.Exec(ctx, `UPDATE users SET avatar_config = $2 WHERE id = $1`, userID, configJSON)
+	if err != nil {
+		return fmt.Errorf("users.UpdateAvatarConfig: %w", err)
 	}
 	return nil
 }

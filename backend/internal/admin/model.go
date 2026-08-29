@@ -119,6 +119,7 @@ type AdminPing struct {
 	ReportCount int     `json:"report_count"`
 	CreatedAt   string  `json:"created_at"`
 	AnimalType  *string `json:"animal_type,omitempty"`
+	AnimalBreed *string `json:"animal_breed,omitempty"`
 	AnimalCount int     `json:"animal_count"`
 }
 
@@ -195,4 +196,21 @@ type UpdateFeedingEventRequest struct {
 type CreateFeedingEventAdminRequest struct {
 	Note            *string `json:"note,omitempty"`
 	AnimalCountSeen *int    `json:"animal_count_seen,omitempty"`
+}
+
+// ─── Sprites ───────────────────────────────────────────────────────────────────
+
+// SpriteEntry is a single file or directory in the sprite tree.
+type SpriteEntry struct {
+	Name  string        `json:"name"`
+	IsDir bool          `json:"is_dir"`
+	Size  int64         `json:"size,omitempty"`
+	Path  string        `json:"path"`
+	Children []SpriteEntry `json:"children,omitempty"`
+}
+
+// UploadSpriteResponse is the response after a successful sprite upload.
+type UploadSpriteResponse struct {
+	Path string `json:"path"`
+	Size int64  `json:"size"`
 }

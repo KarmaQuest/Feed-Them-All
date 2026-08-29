@@ -12,12 +12,13 @@ import AuthForm, { type AuthFormFields } from '../components/AuthForm'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const loginStore = useAuthStore((s) => s.login)
+  const loginStore = useAuthStore(s => s.login)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [isFeeder, setIsFeeder] = useState(true)
   const [isGiver, setIsGiver] = useState(false)
   const [isAssociation, setIsAssociation] = useState(false)
+  const [gender, setGender] = useState<'male' | 'female' | 'other'>('male')
 
   function toggleFeeder(checked: boolean) {
     setIsFeeder(checked)
@@ -29,7 +30,10 @@ export default function RegisterPage() {
   }
   function toggleAssociation(checked: boolean) {
     setIsAssociation(checked)
-    if (checked) { setIsFeeder(false); setIsGiver(false) }
+    if (checked) {
+      setIsFeeder(false)
+      setIsGiver(false)
+    }
   }
 
   async function handleSubmit({ email, password, username }: AuthFormFields) {
@@ -37,13 +41,22 @@ export default function RegisterPage() {
     if (isFeeder) roles.push('feeder')
     if (isGiver) roles.push('giver')
     if (isAssociation) roles.push('association')
-    if (roles.length === 0) { setError('Sélectionne au moins un rôle.'); return }
+    if (roles.length === 0) {
+      setError('Sélectionne au moins un rôle.')
+      return
+    }
 
     setError('')
     setLoading(true)
     try {
-      const data = await register(username ?? '', email, password, roles)
-      loginStore({ id: data.user.id, username: data.user.username, role: data.user.role })
+      const data = await register(username ?? '', email, password, roles, { gender })
+      loginStore({
+        id: data.user.id,
+        username: data.user.username,
+        role: data.user.role,
+        roles: data.user.roles,
+        avatar_config: data.user.avatar_config,
+      })
       navigate('/')
     } catch (err: unknown) {
       const apiMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
@@ -53,11 +66,55 @@ export default function RegisterPage() {
     }
   }
 
+  const genderSelector = (
+    <div className="auth-gender">
+      <p className="auth-roles__label">Genre de l'avatar</p>
+      <div className="auth-gender__options">
+        <label
+          className={`auth-gender__option${gender === 'male' ? ' auth-gender__option--active' : ''}`}
+        >
+          <input
+            type="radio"
+            name="gender"
+            value="male"
+            checked={gender === 'male'}
+            onChange={() => setGender('male')}
+          />
+          <span>👤 Masculin</span>
+        </label>
+        <label
+          className={`auth-gender__option${gender === 'female' ? ' auth-gender__option--active' : ''}`}
+        >
+          <input
+            type="radio"
+            name="gender"
+            value="female"
+            checked={gender === 'female'}
+            onChange={() => setGender('female')}
+          />
+          <span>👩 Féminin</span>
+        </label>
+        <label
+          className={`auth-gender__option${gender === 'other' ? ' auth-gender__option--active' : ''}`}
+        >
+          <input
+            type="radio"
+            name="gender"
+            value="other"
+            checked={gender === 'other'}
+            onChange={() => setGender('other')}
+          />
+          <span>⚧️ Autre</span>
+        </label>
+      </div>
+    </div>
+  )
+
   const roleSelector = (
     <div className="auth-roles">
       <p className="auth-roles__label">Ton rôle</p>
       <label className="auth-roles__option">
-        <input type="checkbox" checked={isFeeder} onChange={(e) => toggleFeeder(e.target.checked)} />
+        <input type="checkbox" checked={isFeeder} onChange={e => toggleFeeder(e.target.checked)} />
         <span className="auth-roles__icon">🍽️</span>
         <span>
           <strong>Feeder</strong>
@@ -65,15 +122,21 @@ export default function RegisterPage() {
         </span>
       </label>
       <label className="auth-roles__option">
-        <input type="checkbox" checked={isGiver} onChange={(e) => toggleGiver(e.target.checked)} />
+        <input type="checkbox" checked={isGiver} onChange={e => toggleGiver(e.target.checked)} />
         <span className="auth-roles__icon">🎁</span>
         <span>
           <strong>Giver</strong>
           <small>Je fournis de la nourriture</small>
         </span>
       </label>
-      <label className={`auth-roles__option auth-roles__option--exclusive${isAssociation ? ' auth-roles__option--active' : ''}`}>
-        <input type="checkbox" checked={isAssociation} onChange={(e) => toggleAssociation(e.target.checked)} />
+      <label
+        className={`auth-roles__option auth-roles__option--exclusive${isAssociation ? ' auth-roles__option--active' : ''}`}
+      >
+        <input
+          type="checkbox"
+          checked={isAssociation}
+          onChange={e => toggleAssociation(e.target.checked)}
+        />
         <span className="auth-roles__icon">🏢</span>
         <span>
           <strong>Association</strong>
@@ -91,7 +154,12 @@ export default function RegisterPage() {
       loading={loading}
       error={error}
       onSubmit={handleSubmit}
-      extraFields={roleSelector}
+      extraFields={
+        <>
+          {genderSelector}
+          {roleSelector}
+        </>
+      }
       footer={
         <p>
           Déjà inscrit ?{' '}

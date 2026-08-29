@@ -25,7 +25,7 @@ import "context"
 type Store interface {
 	// Create inserts a new ping and returns the created Ping (with generated ID and timestamps).
 	// animalType may be empty for food pings; animalCount defaults to 1.
-	Create(ctx context.Context, userID, pingType string, lat, lon float64, animalType *string, animalCount int) (Ping, error)
+	Create(ctx context.Context, userID, pingType string, lat, lon float64, animalType *string, animalCount int, animalBreed *string) (Ping, error)
 
 	// ListNearby returns all active pings within the given radius (metres) of the given coordinates.
 	// Optionally filtered by type ("animal" or "food"). Returns at most 200 results.
@@ -80,7 +80,7 @@ type Store interface {
 	// ListFeedingEvents returns all feeding events for a ping, ordered most recent first.
 	ListFeedingEvents(ctx context.Context, pingID string) ([]FeedingEvent, error)
 
-	// UpdatePing updates animal_type and/or animal_count for a ping.
+	// UpdatePing updates animal_type, animal_breed, and/or animal_count for a ping.
 	// Only the owner may update. Returns ErrNotOwner or ErrNotFound as appropriate.
-	UpdatePing(ctx context.Context, id, userID string, animalType *string, animalCount *int) (Ping, error)
+	UpdatePing(ctx context.Context, id, userID string, animalType *string, animalBreed *string, animalCount *int) (Ping, error)
 }

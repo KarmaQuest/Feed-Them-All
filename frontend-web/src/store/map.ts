@@ -36,32 +36,29 @@ interface MapStore {
   updateFeeder: (pos: FeederPosition) => void
 }
 
-export const useMapStore = create<MapStore>((set) => ({
+export const useMapStore = create<MapStore>(set => ({
   pings: [],
-  setPings: (pings) => set({ pings }),
-  addPing: (ping) =>
-    set((s) => ({
-      pings: s.pings.some((p) => p.id === ping.id)
-        ? s.pings
-        : [ping, ...s.pings],
+  setPings: pings => set({ pings }),
+  addPing: ping =>
+    set(s => ({
+      pings: s.pings.some(p => p.id === ping.id) ? s.pings : [ping, ...s.pings],
     })),
-  updatePing: (ping) =>
-    set((s) => ({
-      pings: s.pings.map((p) => (p.id === ping.id ? ping : p)),
+  updatePing: ping =>
+    set(s => ({
+      pings: s.pings.map(p => (p.id === ping.id ? ping : p)),
     })),
-  removePing: (id) =>
-    set((s) => ({ pings: s.pings.filter((p) => p.id !== id) })),
+  removePing: id => set(s => ({ pings: s.pings.filter(p => p.id !== id) })),
 
   selectedPingId: null,
-  setSelectedPing: (id) => set({ selectedPingId: id }),
+  setSelectedPing: id => set({ selectedPingId: id }),
 
   userLat: null,
   userLon: null,
   setUserPosition: (lat, lon) => set({ userLat: lat, userLon: lon }),
 
   feeders: {},
-  updateFeeder: (pos) =>
-    set((s) => ({
+  updateFeeder: pos =>
+    set(s => ({
       feeders: { ...s.feeders, [pos.feeder_id]: pos },
     })),
 }))

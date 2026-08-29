@@ -9,7 +9,7 @@ import AuthForm, { type AuthFormFields } from '../components/AuthForm'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const loginStore = useAuthStore((s) => s.login)
+  const loginStore = useAuthStore(s => s.login)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -22,7 +22,7 @@ export default function LoginPage() {
         setError('Accès refusé — compte admin requis.')
         return
       }
-      loginStore({ id: data.user.id, username: data.user.username, role: data.user.role })
+      loginStore({ id: data.user.id, username: data.user.username, role: data.user.role, roles: data.user.roles })
       navigate('/admin')
     } catch {
       setError('Email ou mot de passe incorrect.')

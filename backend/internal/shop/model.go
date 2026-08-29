@@ -17,6 +17,8 @@
 //   {"type":"action_count","action":"feed","value":10}
 package shop
 
+import "time"
+
 // UnlockCondition is the condition that must be met to unlock a free item via quests.
 // nil = item is free with no condition (base item) or paid item.
 type UnlockCondition struct {
@@ -40,7 +42,7 @@ type AvatarItem struct {
 // InventoryItem is an item owned by a user.
 type InventoryItem struct {
 	Item       AvatarItem `json:"item"`
-	AcquiredAt string     `json:"acquired_at"`
+	AcquiredAt time.Time  `json:"acquired_at"`
 	Source     string     `json:"source"` // "default" | "quest" | "purchase"
 }
 

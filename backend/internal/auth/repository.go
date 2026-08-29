@@ -34,14 +34,14 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 // CreateUser inserts a new user and returns the created row.
-func (r *Repository) CreateUser(ctx context.Context, email, username, passwordHash, role string, roles []string) (User, error) {
+func (r *Repository) CreateUser(ctx context.Context, email, username, passwordHash, role string, roles []string, avatarConfig []byte) (User, error) {
 	const q = `
-		INSERT INTO users (email, username, password_hash, role, roles)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users (email, username, password_hash, role, roles, avatar_config)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, email, username, role, roles, is_premium, xp, avatar_config, created_at
 	`
 	var u User
-	err := r.db.QueryRow(ctx, q, email, username, passwordHash, role, roles).Scan(
+	err := r.db.QueryRow(ctx, q, email, username, passwordHash, role, roles, avatarConfig).Scan(
 		&u.ID, &u.Email, &u.Username, &u.Role, &u.Roles, &u.IsPremium, &u.XP, &u.AvatarConfig, &u.CreatedAt,
 	)
 	if err != nil {
@@ -98,6 +98,23 @@ func (r *Repository) DeleteRefreshToken(ctx context.Context, userID string) erro
 	_, err := r.db.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1`, userID)
 	if err != nil {
 		return fmt.Errorf("auth.DeleteRefreshToken: %w", err)
+	}
+	return nil
+}
+
+// GrantDefaultAvatarItems grants the 3 default avatar items to a newly registered user.
+// Items: skin_default, outfit_default, accessory_none. Idempotent (ON CONFLICT DO NOTHING).
+func (r *Repository) GrantDefaultAvatarItems(ctx context.Context, userID string) error {
+	const q = `
+		INSERT INTO user_avatar_items (user_id, item_id, source)
+		SELECT $1, id, 'default'
+		FROM avatar_items
+		WHERE slug IN ('skin_default', 'outfit_default', 'accessory_none')
+		ON CONFLICT (user_id, item_id) DO NOTHING
+	`
+	_, err := r.db.Exec(ctx, q, userID)
+	if err != nil {
+		return fmt.Errorf("auth.GrantDefaultAvatarItems: %w", err)
 	}
 	return nil
 }

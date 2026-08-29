@@ -11,6 +11,12 @@
 //   Voir computeLevel() dans service.go.
 package users
 
+// AvatarConfigRequest is the body for PATCH /users/me/avatar.
+// The config is stored as-is in the avatar_config JSONB column.
+type AvatarConfigRequest struct {
+	Config map[string]interface{} `json:"config"`
+}
+
 // BadgeSummary is the condensed badge info returned in a user profile.
 type BadgeSummary struct {
 	Slug  string `json:"slug"`
@@ -21,7 +27,8 @@ type BadgeSummary struct {
 type UserProfile struct {
 	ID           string                 `json:"id"`
 	Username     string                 `json:"username"`
-	Role         string                 `json:"role"`
+	Role         string                 `json:"role"`           // primary role
+	Roles        []string               `json:"roles"`          // all active roles
 	XP           int                    `json:"xp"`
 	Level        int                    `json:"level"`          // computed, not stored in DB
 	Badges       []BadgeSummary         `json:"badges"`
