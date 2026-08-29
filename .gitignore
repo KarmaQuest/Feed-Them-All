@@ -4,6 +4,8 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 backend/feedthemall
 backend/feedthemall.exe
+backend/api.exe
+*.log
 
 # Frontend
 frontend-web/node_modules/
@@ -22,6 +24,10 @@ frontend-mobile/.env
 *.env.local
 .DS_Store
 Thumbs.db
+
+# Design assets (sprites protégés — ne pas tracker dans git)
+references/design/sprites/
+references/design/ideas/
 
 # Go
 *.test

@@ -1,0 +1,9 @@
+.avs {
+  display: inline-block;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+  transition: transform 0.15s;
+}
+.avs:hover {
+  transform: scale(1.05);
+}

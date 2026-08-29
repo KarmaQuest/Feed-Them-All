@@ -1,0 +1,210 @@
+/* src/pages/ShopPage.css — Page boutique + quêtes (layout card). */
+
+.shop-page {
+  min-height: 100dvh;
+  background: var(--bg-base);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.shop-page__card-wrap {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 1.75rem 1.5rem;
+  width: 100%;
+  max-width: min(960px, 95vw);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.shop-page__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.shop-page__back {
+  background: none;
+  border: none;
+  color: var(--primary-lighter);
+  font-family: var(--font-pixel);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-md);
+  transition: background var(--transition);
+}
+.shop-page__back:hover {
+  background: var(--primary-bg);
+}
+
+.shop-page__title {
+  font-family: var(--font-pixel);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+
+/* ── Content ──────────────────────────────────────────────────────── */
+.shop-page__loading,
+.shop-page__empty {
+  text-align: center;
+  color: var(--text-faint);
+  font-family: var(--font-pixel);
+  font-size: var(--text-sm);
+  padding: 2rem 0;
+}
+
+.shop-page__section-desc {
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+/* ── Items flexbox (space-between responsif) ──────────────────────── */
+.shop-page__items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.shop-page__items::after {
+  content: "";
+  flex: 1 1 260px;
+}
+
+.shop-page__card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color var(--transition);
+  flex: 1 1 260px;
+  max-width: 320px;
+}
+.shop-page__card:hover {
+  border-color: var(--border-strong);
+}
+.shop-page__card.owned {
+  border-color: var(--success-border);
+}
+
+.shop-page__card-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--bg-input);
+  min-height: 120px;
+}
+
+.shop-page__card-img {
+  width: 72px;
+  height: 72px;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+.shop-page__card-info {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.shop-page__card-name {
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  font-weight: 400;
+  margin: 0;
+}
+
+.shop-page__card-category {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  font-family: var(--font-pixel);
+}
+
+.shop-page__card-condition {
+  font-size: var(--text-xs);
+  color: var(--warning);
+  font-family: var(--font-pixel);
+  margin: 0.25rem 0 0;
+}
+
+.shop-page__card-price {
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  color: var(--success);
+  margin-top: auto;
+}
+
+.shop-page__card-action {
+  padding: 0.5rem 2rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: center;
+}
+
+.shop-page__owned-badge {
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  color: var(--success);
+}
+
+.shop-page__btn {
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--transition);
+  width: 100%;
+}
+
+.shop-page__btn--claim {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+.shop-page__btn--claim:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+.shop-page__btn--claim:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Alerts ───────────────────────────────────────────────────────── */
+.shop-page__alert {
+  text-align: center;
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+}
+
+.shop-page__alert--error {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+}
+
+.shop-page__alert--success {
+  color: var(--success);
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+}

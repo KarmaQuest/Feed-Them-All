@@ -1,0 +1,55 @@
+/* =============================================================
+   src/index.css — Point d'entrée CSS unique
+   Ordre d'import important :
+     1. tokens    → variables CSS (doit être en premier)
+     2. components → classes réutilisables
+     3. utilities  → helpers atomiques
+   Les fichiers de page (AdminPage.css, LoginPage.css) sont
+   importés dans leur composant respectif et ne contiennent
+   que du layout spécifique à la page.
+   ============================================================= */
+
+@import './styles/tokens.css';
+@import './styles/components.css';
+@import './styles/utilities.css';
+
+/* ── Reset global ───────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Base : 62.5% = 1rem est 10px (au lieu de 16px par défaut).
+   Press Start 2P est visuellement 2× plus grande que les polices système.
+   Réduire la base compense cet effet sans changer tous les rem. */
+html {
+  font-size: 75%;
+}
+
+body {
+  font-family: var(--font-pixel);
+  font-size: var(--text-md);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  line-height: 1.8;
+  /* Pas d'antialiasing : le pixel art doit rester net */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  font-family: inherit;
+}
+input,
+select,
+textarea {
+  font-family: inherit;
+  color-scheme: dark;
+}

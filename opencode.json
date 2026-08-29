@@ -1,0 +1,49 @@
+{
+  "$schema": "https://opencode.ai",
+  "model": "deepseek/deepseek-chat",
+  "small_model": "qwen/qwen3-coder:free",
+  "provider": {
+    "deepseek": {
+      "options": {
+        "apiKey": "{env:DEEPSEEK_API_KEY}"
+      }
+    },
+    "openrouter": {
+      "options": {
+        "apiKey": "{env:OPENROUTER_API_KEY}"
+      }
+    }
+  },
+  "agent": {
+    "backend-go": {
+      "model": "deepseek/deepseek-chat",
+      "mode": "subagent",
+      "description": "Développement Go backend (API, WebSocket, auth, pings, gamification, shop, admin)"
+    },
+    "frontend-react": {
+      "model": "deepseek/deepseek-chat",
+      "mode": "subagent",
+      "description": "Développement React/TypeScript (composants, pages, store Zustand, styles CSS)"
+    },
+    "sql-postgis": {
+      "model": "qwen/qwen3-coder:free",
+      "mode": "subagent",
+      "description": "Requêtes PostgreSQL/PostGIS, migrations SQL, optimisation spatiale"
+    },
+    "pixel-art": {
+      "model": "qwen/qwen3-coder:free",
+      "mode": "subagent",
+      "description": "Conseils design pixel art, Aseprite, spritesheets, CSS pixel art"
+    },
+    "light": {
+      "model": "qwen/qwen3-coder:free",
+      "mode": "subagent",
+      "description": "Tâches simples — exploration de code, grep, petites modifications"
+    },
+    "vision": {
+      "model": "openrouter/free",
+      "mode": "subagent",
+      "description": "Lecture et description d'images (screenshots, mockups PNG). Utilise Read tool sur les fichiers image et décrit précisément couleurs, formes, effets visuels."
+    }
+  }
+}

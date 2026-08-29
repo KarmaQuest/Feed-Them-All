@@ -122,6 +122,9 @@ fix/*         ← Corrections de bugs
 - **Conventional Commits** : `feat:`, `fix:`, `chore:`, `docs:`, `refactor:` — obligatoire pour générer un changelog
 - Chaque PR doit passer les tests CI avant merge
 - Pas de push direct sur `main` ni `dev`
+- **Règle absolue — push à chaque étape** : chaque tâche ou sous-tâche terminée (P1-01, P1-02…) doit faire l'objet d'un commit + push sur `dev` immédiatement après validation. Aucune étape ne reste en local.
+- **Règle absolue — tests** : ne jamais créer de fichiers de tests ni lancer de phase de test sans accord explicite de l'utilisateur. L'utilisateur doit valider le contenu et le moment des tests.
+- **Règle absolue — commentaires fichiers** : chaque fichier de code (Go, TypeScript, SQL, etc.) doit commencer par un bloc de commentaire expliquant : (1) le rôle du fichier, (2) ce qu'il contient, (3) comment il s'articule avec le reste. Les commentaires sur les fonctions/méthodes doivent être précis et décrire les paramètres, le comportement, et les erreurs possibles.
 
 ---
 
@@ -188,6 +191,63 @@ L'univers visuel s'inspire des jeux Pokémon (pixel art, ambiance rétro-cute) p
 - ✅ L'avatar en temps réel sur la carte = WebSocket qui pousse la position GPS du Feeder actif
 - ✅ La customisation = un objet JSON `{skin, hair, outfit, accessory}` stocké en DB, rendu côté client
 - ⚠️ Créer les sprites prend du temps — prévoir un set minimal pour le MVP (1 avatar générique, 2-3 animaux, 2 icônes)
+
+---
+
+## Workflow de Démarrage Local (à faire à chaque session)
+
+### 1. Base de données (Docker)
+```powershell
+docker compose up -d
+# Vérifie : docker ps → feedthemallfta-db-1 Running
+```
+
+### 2. Backend Go (port 8080)
+```powershell
+# Tuer tout process qui occuperait le port 8080 avant de démarrer
+Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+
+# Puis lancer le backend
+$env:Path += ";C:\Program Files\Go\bin"
+Set-Location "D:\DesktopFiles\ProjetPerso\FeedThemAll (FTA)\backend"
+$env:DATABASE_URL="postgres://fta:fta@localhost:5432/feedthemall?sslmode=disable"
+$env:JWT_SECRET="dev-secret-change-in-prod"
+$env:JWT_REFRESH_SECRET="dev-refresh-secret-change-in-prod"
+$env:ENV="development"
+$env:PORT="8080"
+go run ./cmd/api
+```
+Attendre `INFO server starting port=8080` avant de passer à la suite.
+
+### 3. Frontend React (port 5173)
+```powershell
+Set-Location "D:\DesktopFiles\ProjetPerso\FeedThemAll (FTA)\frontend-web"
+npm run dev
+```
+
+### Règles importantes
+- **Ne jamais utiliser `&&` dans PowerShell** — utiliser `;` à la place
+- **Go n'est pas dans le PATH par défaut** — toujours ajouter `$env:Path += ";C:\Program Files\Go\bin"` avant `go run`
+- **Port 8080 déjà occupé** (erreur `bind: Only one usage`) → tuer le PID avec `Get-NetTCPConnection` puis relancer
+- **Vite se coupe** si le terminal node est fermé → relancer `npm run dev` dans `frontend-web/`
+- **Reset mot de passe** : ne jamais passer un hash bcrypt via PowerShell (l'escaping corrompt les `$`). Utiliser un mini programme Go avec `db.Exec("UPDATE ... SET password_hash = $1", hash, email)`
+- **Comptes admin** : `kervanmazuy@gmail.com` / `Karma1234` (compte Karma) et `shoptest@test.com` / `Admin1234`
+
+### ⚠️ RÈGLE ABSOLUE — Ne jamais modifier des fichiers source (.tsx/.ts/.go) via PowerShell `Set-Content`
+
+`Set-Content -Encoding UTF8` dans PowerShell 5.1 produit deux effets destructeurs :
+1. **BOM UTF-8** (bytes `EF BB BF`) en tête du fichier → parse error Vite/TypeScript
+2. **Double-encodage des caractères non-ASCII** (accents, emoji) → mojibake irréparable à l'écran (ex. `Déconnexion` → `DÃ©connexion`, `🐾` → `ðŸ¾`)
+
+**Règle** : pour créer ou réécrire un fichier source, utiliser **uniquement l'outil `create_file` de l'agent** (VS Code Copilot). Jamais PowerShell.
+
+**Vérification BOM si suspicion** :
+```powershell
+$b = [System.IO.File]::ReadAllBytes("chemin\fichier.tsx")
+"Premiers bytes: $($b[0]) $($b[1]) $($b[2])"
+# OK    → 47  (slash '/', début normal du fichier)
+# CORROMPU → 239 187 191 (BOM UTF-8)
+```
 
 ---
 
@@ -261,6 +321,100 @@ Les agents sont des fichiers `SKILL.md` dans `.github/skills/`, chargés automat
 
 ---
 
+## Features Prévues (validées)
+
+### 🐾 Suivi des animaux
+- **Fiche animal persistante** — tout utilisateur (Feeder ou Giver) peut créer une fiche animal : historique des signalements, photos, surnom donné par la communauté. Les fiches peuvent être créées directement depuis un ping ou manuellement.
+- **Mise en avant des fiches associatives** — quand une association partenaire a créé ou validé une fiche pour cet animal, sa fiche est affichée en priorité (badge "Suivi par [Association]", informations de contact, actions en cours). La fiche communautaire reste accessible mais est secondaire.
+- **Statut d'adoption** — marquer un animal comme "adopté" ou "pris en charge par un refuge" (accessible à tous, confirmé par une association si présente)
+- **Estimation de population par zone** — heatmap des zones denses en animaux errants
+
+### 🤝 Partenariats & Impact
+- **Comptes Association** — 3ème type d'utilisateur (association de protection animale) : valide les fiches, organise captures/stérilisations, voit les zones chaudes
+- **Dons ciblés vers associations** — portés par les **associations partenaires** : "Nourrir ce chat pendant 1 mois = 5$", avec tracking de l'impact réel (repas confirmés). FeedThemAll fournit la plateforme, les fonds vont directement à l'association. **FTA ne prend aucune commission.** Chaque association gère son propre compte Stripe.
+- **Dons directs à FeedThemAll** — bouton "Soutenir l'app" accessible depuis le profil et la page À propos. Montants suggérés : **5$ · 10$ · montant libre**. Entièrement volontaire, aucune fonctionnalité bloquée. Devise de base : **USD**. Multi-devises prévu (auto-détection pays via IP, taux Stripe).
+- **Tableau de bord association** — stats d'animaux nourris, zones actives, bénévoles actifs cette semaine
+
+### 🎮 Gamification avancée
+- **Quêtes** — "Nourris 3 animaux différents cette semaine" → XP bonus, style quêtes Pokémon
+- **Guildes de quartier** — groupe de Feeders d'un même quartier, score collectif, classement inter-quartiers
+- **Saisons** — remise à zéro du classement tous les 3 mois + récompenses top 10
+- **Titres géographiques** — "Gardien du 11ème", "Légende de Belleville" selon zone et niveau
+
+### 📍 Carte & Temps réel
+- **Mode nuit/jour** — carte qui change visuellement selon l'heure
+- **Zones dangereuses** — signaler circulation dense, chantier pour avertir les Feeders
+- **Itinéraire de nourrissage** — optimisation de l'ordre des pings à nourrir dans une zone
+
+### 📱 Mobile / UX
+- **Mode hors-ligne** — cache local des pings, sync au retour du réseau
+- **Notifications push** — "Animal non nourri depuis 24h près de toi", "Quelqu'un a confirmé ton ping"
+- **Widget home screen** — compteur d'animaux nourris cette semaine
+
+### 🌍 Scalabilité
+- **Multi-villes / Multi-pays** — structure backend multi-région dès le départ
+- **API publique** — données anonymisées accessibles aux associations et chercheurs
+
+### 💳 Monétisation
+- **Premium volontaire** — abonnement non obligatoire pour soutenir l'app. Paliers : **5$/mois · 10$/mois · montant libre**. Avantages : badge profil Premium, absence de publicités, cosmétiques exclusifs (tenue avatar). Aucune fonctionnalité de jeu bloquée.
+- **Paiement** — Stripe (Web + Mobile). Gestion des abonnements récurrents via Stripe Billing. Webhooks Stripe pour activer/désactiver le statut Premium en DB.
+- **Multi-devises** — devise de base USD. Stripe gère la conversion automatique. Affichage dans la devise locale de l'utilisateur (détection via IP ou préférence profil). Phase 2 : EUR, GBP, CAD.
+- **Dons one-shot** — même interface que le Premium mais sans récurrence (via `payment_intent` Stripe).
+
+### 📢 Publicités — stratégie validée (2026-06-13)
+- **Intégration dès le MVP** — pas de seuil minimum de trafic. L'app a besoin de revenus dès le départ pour payer le serveur.
+- **Web (Google AdSense)** :
+  - Bannière fixe en bas de la page `/profile` et de la page `/shop`
+  - **Jamais sur la carte** (UX catastrophique, bannirait les utilisateurs)
+- **Mobile (Google AdMob)** :
+  - Bannière fixe en bas d'écran sur les pages profil/leaderboard (hors carte)
+  - **Rewarded video** : regarder une pub = +50 XP → motivation forte, visionnage volontaire
+  - Interstitiel : uniquement au retour à l'accueil entre deux sessions, jamais pendant une action
+- **Premium** : l'abonnement Premium inclut la suppression de toutes les pubs (web + mobile)
+
+### 📊 Analytics — Matomo self-hosted (validé 2026-06-13)
+- **Outil retenu : Matomo** — solution la plus complète, 100% self-hosted, RGPD natif, aucune donnée envoyée à un tiers
+- Fonctionnalités utilisées : pages vues, événements custom (`ping_created`, `animal_fed`, `badge_unlocked`, `shop_purchase`), entonnoirs de conversion, heatmaps, suivi géographique
+- **Déploiement** : conteneur Docker sur le même VPS que le backend (Matomo + MySQL dédié)
+- **Script** : ~80 Ko — acceptable, chargé en async, n'impacte pas les performances
+- **RGPD** : anonymisation IP activée + respect Do Not Track + aucun cookie tiers
+- **Avantage vs Umami/PostHog** : données persistantes, entonnoirs natifs, compatible avec le suivi Stripe (conversion achat)
+
+### Priorités MVP+1
+1. Fiche animal persistante (différenciant émotionnel fort)
+2. Quêtes (boost rétention simple à implémenter)
+3. Comptes Association (partenariats + monétisation B2B)
+
+---
+
+## Hébergement & Déploiement
+
+### WebSocket et serverless — incompatibilité
+Le WebSocket nécessite une **connexion persistante**. Les hébergements de type "serverless" (AWS Lambda, Vercel Functions, Netlify Functions) coupent les connexions après 30 secondes maximum — ils sont donc incompatibles avec FeedThemAll. Il faut un **serveur qui tourne en permanence**.
+
+### Options recommandées
+
+| Option | Prix | Complexité | WebSocket | PostGIS | Uploads |
+|---|---|---|---|---|---|
+| **Hetzner VPS CX23** | ~4.49€/mois | Moyenne | ✅ | ✅ Docker | ✅ disque local |
+| **Fly.io** | ~5-10€/mois | Faible | ✅ natif | ✅ via Fly Postgres | ⚠️ éphémère → R2 |
+| **Railway** | ~5€/mois | Très faible | ✅ | ⚠️ PostGIS non garanti | ⚠️ éphémère |
+| **Render** | ~7€/mois | Faible | ✅ | ✅ | ⚠️ éphémère |
+
+> ⚠️ "Éphémère" signifie que les fichiers uploadés disparaissent à chaque redéploiement. En production, les photos doivent être stockées sur un service externe (Cloudflare R2 ou AWS S3).
+
+### Recommandation par stade
+
+**MVP / dev seul → Hetzner VPS CX23 (~4.49€/mois)**
+- Un seul serveur Linux, Docker Compose, tout dessus : Go + PostgreSQL+PostGIS + fichiers
+- Zéro complexité supplémentaire, pas de services séparés à gérer
+- Exactement ce qu'on a en local, déployé sur un vrai serveur distant
+
+**Si l'app grandit (beaucoup d'utilisateurs) :**
+- Fly.io (backend Go) + Supabase (PostgreSQL+PostGIS managé) + Cloudflare R2 (photos)
+
+---
+
 ## Décisions Architecturales Notables
 
 | Décision | Choix | Raison |
@@ -270,3 +424,38 @@ Les agents sont des fichiers `SKILL.md` dans `.github/skills/`, chargés automat
 | Mobile | React Native (pas Flutter) | Partage de code JS avec le Web |
 | Carte | Leaflet + OpenStreetMap | Zéro coût, aucune clé API, open source |
 | Auth | JWT stateless | Simplifie le scaling horizontal |
+
+---
+
+## Session Summary — 2026-06-28/29
+
+### SM Passe 1 achevée (SM-01 à SM-11e)
+
+Tout le Sprite Management System est opérationnel :
+
+**Backend**
+- `SPRITES_DIR` config (default `./sprites`), serveur fichier sur `GET /sprites/*`
+- CRUD admin : `GET /admin/sprites` (arborescence), `POST /admin/sprites/upload` (validé MIME PNG, anti-path-traversal, max 5 MB, avec `filename` optionnel), `DELETE /admin/sprites?path=...`
+- `POST /admin/shop-items/{id}/sprite` → `shop/{slug}/south.png`
+- Override de nom via `filename` en form-data
+
+**Frontend admin**
+- Onglet "Sprites" : arbre récursif, preview 64px, upload, suppression, animation hover pour `spritesheet.png`
+- Formulaire Boutique : sélecteur sprite grille (thumbnails 64px depuis `shop/`), upload inline, auto-slug depuis le nom avec vérification collision + incrémentation (`slug_01`), preview animation ▶
+- AvatarSprite : `sm:32, md:48, lg:64` — suppression bord/shadow
+
+**Carte Leaflet**
+- `createAvatarIcon()` → 64px, pas de bord/shadow, résolution `/api/sprites/shop/{outfit}/south.png` sinon `/api/sprites/default/characters/{gender}/south.png`
+- Icônes ping 48px avec tentative PNG → fallback SVG via `onerror`
+- Centre par défaut : Hô-Chi-Minh-Ville (10.7769, 106.7009)
+
+**Sprites 64×64**
+- `backend/sprites/default/characters/male/south.png` ← Base_Character_64
+- `backend/sprites/default/characters/female/south.png` ← idem (MVP)
+
+### Prochaines tâches
+- P7-03 à P7-08 (temps réel, customisation, boutique)
+- SM-12 à SM-16 (animations spritesheet)
+
+### Bugs corrigés
+- **FIX-04** : Upload `filename=` ignoré dans le Path retourné (service.go utilisait `filepath.Base(filePath)` au lieu de `name`)

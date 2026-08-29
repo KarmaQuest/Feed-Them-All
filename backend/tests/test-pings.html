@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<!-- backend/tests/test-pings.html
+     Page de test manuelle pour tous les endpoints /pings.
+     Servie par Go en mode development : http://localhost:8080/tests/test-pings.html
+     Couvre : créer, chercher, confirmer, nourri, supprimer, upload média,
+              signaler (report), voter up/down sur un signalement.
+     Prérequis : être connecté via test-auth.html pour avoir un access_token.
+-->
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>FeedThemAll — Test Pings</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: monospace; background: #1e1e2e; color: #cdd6f4; padding: 2rem; }
+    h1 { color: #89b4fa; margin-bottom: 0.5rem; }
+    .subtitle { color: #a6adc8; font-size: 0.85rem; margin-bottom: 2rem; }
+    .subtitle a { color: #89b4fa; }
+    h2 { color: #cba6f7; margin-bottom: 1rem; font-size: 1rem; }
+    h3 { color: #f9e2af; margin: 1.5rem 0 1rem; font-size: 0.9rem; border-bottom: 1px solid #45475a; padding-bottom: 0.5rem; }
+    label { display: block; font-size: 0.8rem; color: #a6adc8; margin-bottom: 0.25rem; margin-top: 0.75rem; }
+    input, select, textarea { width: 100%; padding: 0.5rem; background: #1e1e2e; border: 1px solid #45475a; border-radius: 4px; color: #cdd6f4; font-family: monospace; font-size: 0.85rem; }
+    textarea { resize: vertical; min-height: 60px; }
+    button { margin-top: 1rem; width: 100%; padding: 0.6rem; background: #89b4fa; color: #1e1e2e; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-family: monospace; }
+    button:hover { background: #b4befe; }
+    button.danger { background: #f38ba8; }
+    button.danger:hover { background: #eba0ac; }
+    button.success { background: #a6e3a1; }
+    button.success:hover { background: #94e2d5; }
+    .result { margin-top: 1rem; background: #1e1e2e; border-radius: 4px; padding: 0.75rem; font-size: 0.78rem; white-space: pre-wrap; word-break: break-all; min-height: 50px; border-left: 3px solid #45475a; max-height: 300px; overflow-y: auto; }
+    .result.ok { border-color: #a6e3a1; }
+    .result.err { border-color: #f38ba8; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; }
+    .card { background: #313244; border-radius: 8px; padding: 1.5rem; }
+    .token-box { background: #313244; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
+    .token-box input { font-size: 0.72rem; }
+    #last-ping-id { color: #a6e3a1; font-size: 0.8rem; margin-top: 0.5rem; word-break: break-all; }
+    #last-report-id { color: #f9e2af; font-size: 0.8rem; margin-top: 0.5rem; word-break: break-all; }
+    .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.7rem; font-weight: bold; margin-right: 0.25rem; }
+    .tag.jwt { background: #45475a; color: #cba6f7; }
+    .tag.pub { background: #45475a; color: #a6e3a1; }
+  </style>
+</head>
+<body>
+  <h1>🐾 FeedThemAll — Test Pings</h1>
+  <p class="subtitle">
+    Prérequis : se connecter d'abord sur <a href="/tests/test-auth.html" target="_blank">test-auth.html</a>
+    et coller l'access_token ci-dessous.
+  </p>
+
+  <!-- TOKEN INPUT -->
+  <div class="token-box">
+    <h2>🎟 Access Token JWT</h2>
+    <label>Coller l'access_token reçu lors du login (Bearer)</label>
+    <input id="token" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+    <div style="margin-top:1rem">
+      <label>📌 Dernier Ping ID créé (rempli automatiquement)</label>
+      <div id="last-ping-id">—</div>
+    </div>
+    <div style="margin-top:0.75rem">
+      <label>📋 Dernier Report ID créé (rempli automatiquement)</label>
+      <div id="last-report-id">—</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1 : CRÉER + CHERCHER -->
+  <h3>1 — Créer &amp; Chercher des pings</h3>
+  <div class="grid">
+
+    <!-- CREATE -->
+    <div class="card">
+      <h2>➕ POST /pings <span class="tag jwt">JWT</span></h2>
+      <label>Type</label>
+      <select id="create-type">
+        <option value="animal">animal</option>
+        <option value="food">food</option>
+        <option value="invalid">invalid (❌ test erreur)</option>
+      </select>
+      <label>Latitude (Paris: 48.8566)</label>
+      <input id="create-lat" type="number" step="0.0001" value="48.8566" />
+      <label>Longitude (Paris: 2.3522)</label>
+      <input id="create-lon" type="number" step="0.0001" value="2.3522" />
+      <button onclick="createPing()">Créer le ping</button>
+      <div class="result" id="create-result">—</div>
+    </div>
+
+    <!-- LIST NEARBY -->
+    <div class="card">
+      <h2>🔍 GET /pings <span class="tag pub">public</span></h2>
+      <label>Latitude centre</label>
+      <input id="list-lat" type="number" step="0.0001" value="48.8566" />
+      <label>Longitude centre</label>
+      <input id="list-lon" type="number" step="0.0001" value="2.3522" />
+      <label>Rayon (mètres, défaut 500, max 10000)</label>
+      <input id="list-radius" type="number" value="1000" />
+      <label>Type (optionnel)</label>
+      <select id="list-type">
+        <option value="">tous</option>
+        <option value="animal">animal</option>
+        <option value="food">food</option>
+      </select>
+      <button onclick="listPings()">Chercher</button>
+      <div class="result" id="list-result">—</div>
+    </div>
+  </div>
+
+  <!-- SECTION 2 : ACTIONS SUR UN PING -->
+  <h3>2 — Actions sur un ping (ID rempli automatiquement ou saisir manuellement)</h3>
+  <div class="grid3">
+
+    <!-- CONFIRM -->
+    <div class="card">
+      <h2>✅ PATCH /pings/:id/confirm <span class="tag jwt">JWT</span></h2>
+      <label>Ping ID</label>
+      <input id="confirm-id" type="text" placeholder="UUID du ping" />
+      <button class="success" onclick="confirmPing()">Confirmer présence</button>
+      <div class="result" id="confirm-result">—</div>
+    </div>
+
+    <!-- MARK FED -->
+    <div class="card">
+      <h2>🍖 PATCH /pings/:id/fed <span class="tag jwt">JWT</span></h2>
+      <label>Ping ID</label>
+      <input id="fed-id" type="text" placeholder="UUID du ping" />
+      <button class="success" onclick="markFed()">Marquer comme nourri</button>
+      <div class="result" id="fed-result">—</div>
+    </div>
+
+    <!-- DELETE -->
+    <div class="card">
+      <h2>🗑 DELETE /pings/:id <span class="tag jwt">JWT · proprio</span></h2>
+      <label>Ping ID</label>
+      <input id="delete-id" type="text" placeholder="UUID du ping" />
+      <button class="danger" onclick="deletePing()">Désactiver (soft delete)</button>
+      <div class="result" id="delete-result">—</div>
+    </div>
+  </div>
+
+  <!-- SECTION 3 : MÉDIAS -->
+  <h3>3 — Médias (photo de preuve)</h3>
+  <div class="grid">
+
+    <!-- UPLOAD MEDIA -->
+    <div class="card">
+      <h2>📷 POST /pings/:id/media <span class="tag jwt">JWT</span></h2>
+      <label>Ping ID</label>
+      <input id="media-ping-id" type="text" placeholder="UUID du ping" />
+      <label>Fichier (JPEG ou PNG, max 10 Mo)</label>
+      <input id="media-file" type="file" accept="image/jpeg,image/png" />
+      <button onclick="uploadMedia()">Uploader</button>
+      <div class="result" id="upload-result">—</div>
+    </div>
+
+    <!-- LIST MEDIA -->
+    <div class="card">
+      <h2>🖼 GET /pings/:id/media <span class="tag pub">public</span></h2>
+      <label>Ping ID</label>
+      <input id="list-media-id" type="text" placeholder="UUID du ping" />
+      <button onclick="listMedia()">Lister les médias</button>
+      <div class="result" id="list-media-result">—</div>
+    </div>
+  </div>
+
+  <!-- SECTION 4 : SIGNALEMENTS -->
+  <h3>4 — Signalements (reports)</h3>
+  <div class="grid">
+
+    <!-- REPORT -->
+    <div class="card">
+      <h2>🚩 POST /pings/:id/report <span class="tag jwt">JWT · tout utilisateur</span></h2>
+      <label>Ping ID</label>
+      <input id="report-ping-id" type="text" placeholder="UUID du ping" />
+      <label>Raison</label>
+      <select id="report-reason">
+        <option value="wrong_location">wrong_location</option>
+        <option value="animal_gone">animal_gone</option>
+        <option value="duplicate">duplicate</option>
+        <option value="inappropriate">inappropriate</option>
+        <option value="invalid_reason">invalid_reason (❌ test erreur)</option>
+      </select>
+      <label>Commentaire (optionnel)</label>
+      <input id="report-comment" type="text" placeholder="Précisions..." />
+      <button onclick="reportPing()">Signaler</button>
+      <div class="result" id="report-result">—</div>
+    </div>
+
+    <!-- LIST REPORTS -->
+    <div class="card">
+      <h2>📋 GET /pings/:id/reports <span class="tag pub">public</span></h2>
+      <label>Ping ID</label>
+      <input id="list-reports-id" type="text" placeholder="UUID du ping" />
+      <button onclick="listReports()">Lister les signalements</button>
+      <div class="result" id="list-reports-result">—</div>
+    </div>
+  </div>
+
+  <!-- SECTION 5 : VOTES -->
+  <h3>5 — Votes sur un signalement</h3>
+  <div class="grid">
+
+    <!-- VOTE UP -->
+    <div class="card">
+      <h2>👍 POST /pings/:id/reports/:report_id/vote (up) <span class="tag jwt">JWT · tout utilisateur</span></h2>
+      <label>Ping ID (parent du report)</label>
+      <input id="vote-up-ping-id" type="text" placeholder="UUID du ping" />
+      <label>Report ID</label>
+      <input id="vote-up-report-id" type="text" placeholder="UUID du signalement" />
+      <button class="success" onclick="vote('up')">Voter 👍 up</button>
+      <div class="result" id="vote-up-result">—</div>
+    </div>
+
+    <!-- VOTE DOWN -->
+    <div class="card">
+      <h2>👎 POST /pings/:id/reports/:report_id/vote (down) <span class="tag jwt">JWT · tout utilisateur</span></h2>
+      <label>Ping ID (parent du report)</label>
+      <input id="vote-down-ping-id" type="text" placeholder="UUID du ping" />
+      <label>Report ID</label>
+      <input id="vote-down-report-id" type="text" placeholder="UUID du signalement" />
+      <button class="danger" onclick="vote('down')">Voter 👎 down</button>
+      <div class="result" id="vote-down-result">—</div>
+    </div>
+  </div>
+
+  <script>
+    const BASE = 'http://localhost:8080'
+
+    // --- Helpers ---
+
+    function token() {
+      return document.getElementById('token').value.trim()
+    }
+
+    function authHeaders() {
+      return { 'Authorization': 'Bearer ' + token(), 'Content-Type': 'application/json' }
+    }
+
+    function show(id, status, body) {
+      const el = document.getElementById(id)
+      const ok = status >= 200 && status < 300
+      el.className = 'result ' + (ok ? 'ok' : 'err')
+      el.textContent = `HTTP ${status}\n\n${typeof body === 'string' ? body : JSON.stringify(body, null, 2)}`
+    }
+
+    async function req(method, path, payload) {
+      const opts = { method, headers: authHeaders(), credentials: 'include' }
+      if (payload !== undefined) opts.body = JSON.stringify(payload)
+      const res = await fetch(BASE + path, opts)
+      const text = await res.text()
+      try { return { status: res.status, body: JSON.parse(text) } }
+      catch { return { status: res.status, body: text } }
+    }
+
+    async function reqPublic(method, path) {
+      const res = await fetch(BASE + path, { method, credentials: 'include' })
+      const text = await res.text()
+      try { return { status: res.status, body: JSON.parse(text) } }
+      catch { return { status: res.status, body: text } }
+    }
+
+    function setLastPingID(id) {
+      document.getElementById('last-ping-id').textContent = id
+      // Auto-fill all ping ID fields
+      for (const fieldId of ['confirm-id','fed-id','delete-id','media-ping-id','list-media-id',
+                              'report-ping-id','list-reports-id','vote-up-ping-id','vote-down-ping-id']) {
+        const el = document.getElementById(fieldId)
+        if (!el.value) el.value = id
+      }
+    }
+
+    function setLastReportID(id) {
+      document.getElementById('last-report-id').textContent = id
+      for (const fieldId of ['vote-up-report-id','vote-down-report-id']) {
+        const el = document.getElementById(fieldId)
+        if (!el.value) el.value = id
+      }
+    }
+
+    // --- Section 1 : Créer & Chercher ---
+
+    async function createPing() {
+      const { status, body } = await req('POST', '/pings', {
+        type: document.getElementById('create-type').value,
+        lat:  parseFloat(document.getElementById('create-lat').value),
+        lon:  parseFloat(document.getElementById('create-lon').value),
+      })
+      show('create-result', status, body)
+      if (status === 201 && body.id) setLastPingID(body.id)
+    }
+
+    async function listPings() {
+      const lat    = document.getElementById('list-lat').value
+      const lon    = document.getElementById('list-lon').value
+      const radius = document.getElementById('list-radius').value
+      const type   = document.getElementById('list-type').value
+      let path = `/pings?lat=${lat}&lon=${lon}&radius=${radius}`
+      if (type) path += `&type=${type}`
+      const { status, body } = await reqPublic('GET', path)
+      show('list-result', status, body)
+    }
+
+    // --- Section 2 : Actions ---
+
+    async function confirmPing() {
+      const id = document.getElementById('confirm-id').value.trim()
+      const { status, body } = await req('PATCH', `/pings/${id}/confirm`)
+      show('confirm-result', status, status === 204 ? '204 No Content — confirmé ✅' : body)
+    }
+
+    async function markFed() {
+      const id = document.getElementById('fed-id').value.trim()
+      const { status, body } = await req('PATCH', `/pings/${id}/fed`)
+      show('fed-result', status, status === 204 ? '204 No Content — marqué nourri ✅' : body)
+    }
+
+    async function deletePing() {
+      const id = document.getElementById('delete-id').value.trim()
+      const res = await fetch(`${BASE}/pings/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token() },
+        credentials: 'include',
+      })
+      const text = await res.text()
+      let body
+      try { body = JSON.parse(text) } catch { body = text }
+      show('delete-result', res.status, res.status === 204 ? '204 No Content — désactivé ✅' : body)
+    }
+
+    // --- Section 3 : Médias ---
+
+    async function uploadMedia() {
+      const id   = document.getElementById('media-ping-id').value.trim()
+      const file = document.getElementById('media-file').files[0]
+      if (!file) { alert('Sélectionne un fichier d\'abord'); return }
+
+      const form = new FormData()
+      form.append('file', file)
+
+      const res = await fetch(`${BASE}/pings/${id}/media`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token() },
+        credentials: 'include',
+        body: form,
+      })
+      const text = await res.text()
+      let body
+      try { body = JSON.parse(text) } catch { body = text }
+      show('upload-result', res.status, body)
+    }
+
+    async function listMedia() {
+      const id = document.getElementById('list-media-id').value.trim()
+      const { status, body } = await reqPublic('GET', `/pings/${id}/media`)
+      show('list-media-result', status, body)
+    }
+
+    // --- Section 4 : Signalements ---
+
+    async function reportPing() {
+      const id      = document.getElementById('report-ping-id').value.trim()
+      const reason  = document.getElementById('report-reason').value
+      const comment = document.getElementById('report-comment').value.trim()
+      const payload = { reason }
+      if (comment) payload.comment = comment
+
+      const { status, body } = await req('POST', `/pings/${id}/report`, payload)
+      show('report-result', status, body)
+      if (status === 201 && body.id) setLastReportID(body.id)
+    }
+
+    async function listReports() {
+      const id = document.getElementById('list-reports-id').value.trim()
+      const { status, body } = await reqPublic('GET', `/pings/${id}/reports`)
+      show('list-reports-result', status, body)
+    }
+
+    // --- Section 5 : Votes ---
+
+    async function vote(value) {
+      const pingID   = document.getElementById(`vote-${value}-ping-id`).value.trim()
+      const reportID = document.getElementById(`vote-${value}-report-id`).value.trim()
+      const resultID = `vote-${value}-result`
+
+      const { status, body } = await req('POST', `/pings/${pingID}/reports/${reportID}/vote`, { value })
+      show(resultID, status, status === 204 ? `204 No Content — vote ${value} enregistré ✅` : body)
+    }
+  </script>
+</body>
+</html>
